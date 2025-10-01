@@ -1,10 +1,10 @@
-#include "fluid_formulae.h"
 #include <math.h>
+#include "fluid_formulae.h"
 
 // Define constants
-extern const float GRAVITY = 9.806;   // Acceleration due to gravity in m/sec^2
-extern const float SW_WATER;  // Specific weight of water at 4 Celsius
-extern const float F_PI = 3.141592654;
+const float GRAVITY = 9.806;   // Acceleration due to gravity in m/sec^2
+const float SW_WATER;  // Specific weight of water at 4 Celsius
+const float F_PI = 3.141592654;
 
 float forceMA(float mass, float acceleration) {
     // Force an object exerts
