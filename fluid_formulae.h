@@ -2,8 +2,8 @@
 #define FLUID_FORMULAE_H_
 
 // Define constants
-extern const float GRAVITY;   // Acceleration due to gravity
-extern const float SG_WATER;  // Specific gravity of water
+extern const float GRAVITY;   // Acceleration due to gravity in m/sec^2
+extern const float SW_WATER;  // Specific weight of water at 4C
 
 float forceMA(float mass, float acceleration);
 
