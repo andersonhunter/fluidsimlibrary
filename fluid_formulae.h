@@ -52,4 +52,6 @@ float stokesLaw(float outsideRadius, float viscosity, float sphereSW, float flui
 
 float kinematicViscosity(float viscosity, float density);
 
+float pressureFA(float force, float area);
+
 #endif
