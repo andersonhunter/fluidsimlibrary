@@ -36,13 +36,6 @@ float columnarWeight(float fluidSpecificWeight, float height, float diameter);
 
 float forceSurfaceTension(float surfaceTension, float diameter);
 
-float columnHeight(
-    float surfaceTension,
-    float contactAngle,
-    float specificWeight,
-    float diameter
-);
-
 float stress(float force, float area);
 
 float shearStress(float viscosityCoefficient, float velocity, float distance);
