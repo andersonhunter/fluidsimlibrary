@@ -4,6 +4,7 @@
 // Define constants
 extern const float GRAVITY;   // Acceleration due to gravity in m/sec^2
 extern const float SW_WATER;  // Specific weight of water at 4C
+extern const float F_PI;      // Float PI
 
 float forceMA(float mass, float acceleration);
 
