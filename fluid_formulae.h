@@ -19,8 +19,6 @@ float specificWeightDensity(float density);
 
 float specificVolumeSpecificWeight(float specificWeight);
 
-float specificVolumeWeightVolume(float weight, float volume);
-
 float specificVolumeDensity(float density);
 
 float specificGravity(float density);
