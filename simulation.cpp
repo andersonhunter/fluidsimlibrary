@@ -8,7 +8,5 @@ struct Point {
 };
 
 int main() {
-    struct Point p1;
-    printf("%f, %f", p1.pressure, p1.velocity);
     return 0;
 }
