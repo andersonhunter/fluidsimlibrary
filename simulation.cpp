@@ -12,16 +12,29 @@ struct Point {
     float temperature;
 };
 
+void calculateAdvection(struct Point* grid) {
+
+}
+
+struct Point getAtIndex(int x, int y, struct Point* grid) {
+    // Retrieve a point at the given index from the grid
+    // Grid[x][y] = grid[SIZE * x + y]
+    return grid[SIZE * x + y];
+}
+
 int main(int argc, char* argv[]) {
     
     // Initialize grid of points
-    struct Point* grid = (struct Point *)malloc(SIZE * sizeof(Point));
+    // Pseudo-2D array, index in with pointer arithmetic grid[SIZE * row + column]
+    // Ex: grid[2][15] = grid[SIZE * 2 + 15] = grid[47]
+    struct Point* grid = (struct Point *)malloc((SIZE * SIZE) * sizeof(Point));
 
     // Set initial values
-    for(int i = 0; i < SIZE; i++) {
-        grid[i].pressure = 0;
-        grid[i].temperature = 0;
+    for(int i = 0; i < SIZE * SIZE; i++) {
+        grid[i].temperature = 0.;
+        grid[i].pressure = 0.;
     }
 
+    free(grid);
     return 0;
 }
