@@ -36,8 +36,10 @@ void calculateAdvection(struct Point* grid, float timestep) {
         // Need to add boundary checking
         for(int y = 0; y < SIZE; y++) {
             // Calculate the forward estimate
+            // Get previous (x, y) coords
             float xPrev = (float)x - getAtIndex(x, y, grid).vx * timestep;
             float yPrev = (float)y - getAtIndex(x, y, grid).vy * timestep;
+            // Calculate fractional offsets (amount each point differs from its nearest point)
             float dx = xPrev - floor(xPrev);
             float dy = yPrev - floor(yPrev);
             // Now need to interpolate the x and y velocities using the bilinear interpolation thang
