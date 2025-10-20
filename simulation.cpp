@@ -7,6 +7,7 @@
 #define SIZE 16
 #endif
 
+// Eventually, add in ability to switch between bilinear interp and bicubic for performance vs accuracy
 bool hifi = true;  // Determine if the simulation is higher fidelity
 
 struct Point {
@@ -23,6 +24,17 @@ void calculateAdvection(struct Point* grid, float timestep);
 struct Point getAtIndex(int x, int y, struct Point* grid);
 void setVxAtIndex(int x, int y, float vx, struct Point* grid);
 void setVyAtIndex(int x, int y, float vy, struct Point* grid);
+float cubicInterpolate(float p0, float p1, float p2, float p3, float dt);
+
+float cubicInterpolate(float p0, float p1, float p2, float p3, float dt) {
+    // Perform Centripetal Catmull-Rom interpolation to determine advected value
+    // Calculate spline values, use coefficients from Catmull-Rom spline matrix
+    float a0 = -0.5 * p0 + 1.5 * p1 - 1.5 * p2 + 0.5 * p3;
+    float a1 = p0 - 2.5 * p1 + 2. * p2 - 0.5 * p3;
+    float a2 = -0.5 * p0 + 0.5 * p2;
+    // Return the cubic polynomial
+    return dt * (dt * (a0 * dt + a1) + a2) + p1;
+}
 
 void calculateAdvection(struct Point* grid, float timestep) {
     // Use the MacCormack Method
@@ -48,25 +60,15 @@ void calculateAdvection(struct Point* grid, float timestep) {
             // Get previous (x, y) coords
             float xPrev = (float)x - getAtIndex(x, y, grid).vx * timestep;
             float yPrev = (float)y - getAtIndex(x, y, grid).vy * timestep;
-            // Clamp to nearest valid index and sanity check
+            // Round to nearest whole index
             int i = floor(xPrev);
             int j = floor(yPrev);
-            if (i < 0) {
-                i = 0;
-            }
-            if (i >= SIZE) {
-                i = SIZE - 1;
-            }
-            if (j < 0) {
-                j = 0;
-            }
-            if (j >= SIZE) {
-                j = SIZE - 1;
-            }
             // Calculate fractional offsets
             float dx = xPrev - i;
             float dy = yPrev - j;
             // Forward interpolate x and y velocities
+            // vx, vy = CI(CI(p0..p3, dx), dy)
+            // If point is outside the grid, use v = 0 for no-slip boundary conditions
             // Add more quantities (temperature, density, etc) here
             // Maybe turn forward into a forwardStruct at some point?
             
