@@ -31,7 +31,7 @@ void calculateAdvection(struct Point* grid, float timestep) {
     //  Corrected Value = Forward Estimate + 0.5 * (Original Value - Backward Estimate)
     
     //TODO: Maybe add a minmod limiter or filtering to prevent oscillations
-
+    float forwardX, forwardY;
     for(int x = 0; x < SIZE; x++) {
         // Need to add boundary checking
         for(int y = 0; y < SIZE; y++) {
@@ -40,9 +40,20 @@ void calculateAdvection(struct Point* grid, float timestep) {
             float xPrev = (float)x - getAtIndex(x, y, grid).vx * timestep;
             float yPrev = (float)y - getAtIndex(x, y, grid).vy * timestep;
             // Calculate fractional offsets (amount each point differs from its nearest point)
-            float dx = xPrev - floor(xPrev);
-            float dy = yPrev - floor(yPrev);
-            // Now need to interpolate the x and y velocities using the bilinear interpolation thang
+            int i = floor(xPrev);
+            int j = floor(yPrev);
+            float dx = xPrev - i;
+            float dy = yPrev - j;
+            // Forward interpolate x velocity
+            forwardX = (1 - dx) * (1 - dy) * getAtIndex(i, j, grid).vx;
+            forwardX += (dx * (1 - dy) * getAtIndex(i + 1, j, grid).vx);
+            forwardX += ((1 - dx) * dy * getAtIndex(i, j + 1, grid).vx);
+            forwardX += (dx * dy * getAtIndex(i + 1, j + 1, grid).vx);
+            // Forward interpolate y velocity
+            forwardY = (1 - dx) * (1 - dy) * getAtIndex(i, j, grid).vy;
+            forwardY += (dx * (1 - dy) * getAtIndex(i + 1, j, grid).vy);
+            forwardY += ((1 - dx) * dy * getAtIndex(i, j + 1, grid).vy);
+            forwardY += (dx * dy * getAtIndex(i + 1, j + 1, grid).vy);
         }
     }
 }
