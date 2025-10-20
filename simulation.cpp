@@ -41,34 +41,34 @@ float cubicInterpolate(float p0, float p1, float p2, float p3, float dt) {
 void calculateAdvection(struct Point* grid, float timestep) {
     // Use the MacCormack Method
     // Do a forward pass to estimate advection at each point using the Semi-Lagrangian method
-    //   Trace backward along the velocity field to gain the origin point of the fluid
+    //   Trace forward along the velocity field to the estimated new location of the fluid
     //   Interpolate at that point
     //   Store as forward estimate
     // Do a backward pass using Semi-Lagrangian
-    //   Trace forward to estimate where the fluid ends up
+    //   Trace backward from the new point
     //   Interpolate value at that point
     //   Store as backward estimate
     //  Corrected Value = Forward Estimate + 0.5 * (Original Value - Backward Estimate)
     
     //TODO: Maybe add a minmod limiter or filtering to prevent oscillations
     // Currently doing bicubic interpolation for the 4x4 grid [i - 1, j - 1] to [i + 2, j + 2]
-    // Bilinear would be more performant but less accurate
+    // Bilinear would be more performant but less accurate, add as an option later
     for(int x = 0; x < SIZE; x++) {
         // Need to add boundary checking
         for(int y = 0; y < SIZE; y++) {
             float forwardX, forwardY;
             float backwardX, backwardY;
             // Calculate the forward estimate
-            // Get previous (x, y) coords
-            float xPrev = (float)x - getAtIndex(x, y, grid).vx * timestep;
-            float yPrev = (float)y - getAtIndex(x, y, grid).vy * timestep;
+            // Get next (x, y) coords
+            float xNext = (float)x + getAtIndex(x, y, grid).vx * timestep;
+            float yNext = (float)y + getAtIndex(x, y, grid).vy * timestep;
             // Round to nearest whole index
-            int i = floor(xPrev);
-            int j = floor(yPrev);
+            int i = floor(xNext);
+            int j = floor(yNext);
             // Calculate fractional offsets
-            float dx = xPrev - i;
-            float dy = yPrev - j;
-            // Forward interpolate x and y velocities
+            float dx = xNext - i;
+            float dy = yNext - j;
+            // Interpolate x and y velocities at the new point
             // vx, vy = CI(CI(p0..p3, dx), dy)
             // If point is outside the grid, use v = 0 for no-slip boundary conditions
             // Add more quantities (temperature, density, etc) here
@@ -134,10 +134,89 @@ void calculateAdvection(struct Point* grid, float timestep) {
                 getSafeVy(i + 2, j + 2, grid),
                 dx
             );
-            
+
             // Calculate forward estimates
             forwardX = cubicInterpolate(tempX1, tempX2, tempX3, tempX4, dy);
             forwardY = cubicInterpolate(tempY1, tempY2, tempY3, tempY4, dy);
+
+            // Back trace the point and interpolate x and y velocities
+            // vx, vy = CI(CI(p0..p3, dx), dy)
+            // If point is outside the grid, use v = 0 for no-slip boundary conditions
+            // Add more quantities (temperature, density, etc) here
+            // Maybe turn forward into a forwardStruct at some point?
+
+            float xPrev = (float)x - forwardX * timestep;
+            float yPrev = (float)y - forwardY * timestep;
+            // Round to nearest whole index
+            i = floor(xPrev);
+            j = floor(yPrev);
+            // Calculate fractional offsets
+            dx = xPrev - i;
+            dy = yPrev - j;
+
+            tempX1 = cubicInterpolate(
+                getSafeVx(i - 1, j - 1, grid),
+                getSafeVx(i - 1, j, grid),
+                getSafeVx(i - 1, j + 1, grid),
+                getSafeVx(i - 1, j + 2, grid),
+                dx
+            );
+            tempX2 = cubicInterpolate(
+                getSafeVx(i, j - 1, grid),
+                getSafeVx(i, j, grid),
+                getSafeVx(i, j + 1, grid),
+                getSafeVx(i, j + 2, grid),
+                dx
+            );
+            tempX3 = cubicInterpolate(
+                getSafeVx(i + 1, j - 1, grid),
+                getSafeVx(i + 1, j, grid),
+                getSafeVx(i + 1, j + 1, grid),
+                getSafeVx(i + 1, j + 2, grid),
+                dx
+            );
+            tempX4 = cubicInterpolate(
+                getSafeVx(i + 2, j - 1, grid),
+                getSafeVx(i + 2, j, grid),
+                getSafeVx(i + 2, j + 1, grid),
+                getSafeVx(i + 2, j + 2, grid),
+                dx
+            );
+
+            // Estimate row-by-row y-velocity
+            tempY1 = cubicInterpolate(
+                getSafeVy(i - 1, j - 1, grid),
+                getSafeVy(i - 1, j, grid),
+                getSafeVy(i - 1, j + 1, grid),
+                getSafeVy(i - 1, j + 2, grid),
+                dx
+            );
+            tempY2 = cubicInterpolate(
+                getSafeVy(i, j - 1, grid),
+                getSafeVy(i, j, grid),
+                getSafeVy(i, j + 1, grid),
+                getSafeVy(i, j + 2, grid),
+                dx
+            );
+            tempY3 = cubicInterpolate(
+                getSafeVy(i + 1, j - 1, grid),
+                getSafeVy(i + 1, j, grid),
+                getSafeVy(i + 1, j + 1, grid),
+                getSafeVy(i + 1, j + 2, grid),
+                dx
+            );
+            tempY4 = cubicInterpolate(
+                getSafeVy(i + 2, j - 1, grid),
+                getSafeVy(i + 2, j, grid),
+                getSafeVy(i + 2, j + 1, grid),
+                getSafeVy(i + 2, j + 2, grid),
+                dx
+            );
+
+            // Calculate backward estimates
+            backwardX = cubicInterpolate(tempX1, tempX2, tempX3, tempX4, dy);
+            backwardY = cubicInterpolate(tempY1, tempY2, tempY3, tempY4, dy);
+
         }
     }
 }
