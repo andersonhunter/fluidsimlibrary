@@ -25,6 +25,8 @@ struct Point getAtIndex(int x, int y, struct Point* grid);
 void setVxAtIndex(int x, int y, float vx, struct Point* grid);
 void setVyAtIndex(int x, int y, float vy, struct Point* grid);
 float cubicInterpolate(float p0, float p1, float p2, float p3, float dt);
+float getSafeVx(int x, int y, struct Point* grid);
+float getSafeVy(int x, int y, struct Point* grid);
 
 float cubicInterpolate(float p0, float p1, float p2, float p3, float dt) {
     // Perform Centripetal Catmull-Rom interpolation to determine advected value
@@ -71,7 +73,71 @@ void calculateAdvection(struct Point* grid, float timestep) {
             // If point is outside the grid, use v = 0 for no-slip boundary conditions
             // Add more quantities (temperature, density, etc) here
             // Maybe turn forward into a forwardStruct at some point?
+
+            // Estimate row-by-row x-velocity
+            float tempX1, tempX2, tempX3, tempX4, tempY1, tempY2, tempY3, tempY4;
+            tempX1 = cubicInterpolate(
+                getSafeVx(i - 1, j - 1, grid),
+                getSafeVx(i - 1, j, grid),
+                getSafeVx(i - 1, j + 1, grid),
+                getSafeVx(i - 1, j + 2, grid),
+                dx
+            );
+            tempX2 = cubicInterpolate(
+                getSafeVx(i, j - 1, grid),
+                getSafeVx(i, j, grid),
+                getSafeVx(i, j + 1, grid),
+                getSafeVx(i, j + 2, grid),
+                dx
+            );
+            tempX3 = cubicInterpolate(
+                getSafeVx(i + 1, j - 1, grid),
+                getSafeVx(i + 1, j, grid),
+                getSafeVx(i + 1, j + 1, grid),
+                getSafeVx(i + 1, j + 2, grid),
+                dx
+            );
+            tempX4 = cubicInterpolate(
+                getSafeVx(i + 2, j - 1, grid),
+                getSafeVx(i + 2, j, grid),
+                getSafeVx(i + 2, j + 1, grid),
+                getSafeVx(i + 2, j + 2, grid),
+                dx
+            );
+
+            // Estimate row-by-row y-velocity
+            tempY1 = cubicInterpolate(
+                getSafeVy(i - 1, j - 1, grid),
+                getSafeVy(i - 1, j, grid),
+                getSafeVy(i - 1, j + 1, grid),
+                getSafeVy(i - 1, j + 2, grid),
+                dx
+            );
+            tempY2 = cubicInterpolate(
+                getSafeVy(i, j - 1, grid),
+                getSafeVy(i, j, grid),
+                getSafeVy(i, j + 1, grid),
+                getSafeVy(i, j + 2, grid),
+                dx
+            );
+            tempY3 = cubicInterpolate(
+                getSafeVy(i + 1, j - 1, grid),
+                getSafeVy(i + 1, j, grid),
+                getSafeVy(i + 1, j + 1, grid),
+                getSafeVy(i + 1, j + 2, grid),
+                dx
+            );
+            tempY4 = cubicInterpolate(
+                getSafeVy(i + 2, j - 1, grid),
+                getSafeVy(i + 2, j, grid),
+                getSafeVy(i + 2, j + 1, grid),
+                getSafeVy(i + 2, j + 2, grid),
+                dx
+            );
             
+            // Calculate forward estimates
+            forwardX = cubicInterpolate(tempX1, tempX2, tempX3, tempX4, dy);
+            forwardY = cubicInterpolate(tempY1, tempY2, tempY3, tempY4, dy);
         }
     }
 }
@@ -89,6 +155,18 @@ void setVxAtIndex(int x, int y, float vx, struct Point* grid) {
 
 void setVyAtIndex(int x, int y, float vy, struct Point* grid) {
     grid[SIZE * x + y].vy = vy;
+}
+
+float getSafeVx(int x, int y, struct Point* grid) {
+    // Helper function to safely get the x-velocity at a given index
+    // Returns 0 if the index is OOB
+    return (x >= 0 && x < SIZE && y >= 0 && y < SIZE) ? getAtIndex(x, y, grid).vx : 0.;
+}
+
+float getSafeVy(int x, int y, struct Point* grid) {
+    // Helper function to safely get the y-velocity at a given index
+    // Returns 0 if the index is OOB
+    return (x >= 0 && x < SIZE && y >= 0 && y < SIZE) ? getAtIndex(x, y, grid).vy : 0.;
 }
 
 int main(int argc, char* argv[]) {
