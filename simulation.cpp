@@ -48,11 +48,16 @@ void calculateAdvection(struct Point* grid, float timestep) {
     //   Trace backward from the new point
     //   Interpolate value at that point
     //   Store as backward estimate
-    //  Corrected Value = Forward Estimate + 0.5 * (Original Value - Backward Estimate)
+    // Corrected Value = Forward Estimate + 0.5 * (Original Value - Backward Estimate)
+    // Save the corrected point in the temporary struct, then swap out when done
     
     //TODO: Maybe add a minmod limiter or filtering to prevent oscillations
     // Currently doing bicubic interpolation for the 4x4 grid [i - 1, j - 1] to [i + 2, j + 2]
     // Bilinear would be more performant but less accurate, add as an option later
+
+    // Create struct of temporary values
+    struct Point* tempGrid = (struct Point *)malloc((SIZE * SIZE) * sizeof(Point));
+
     for(int x = 0; x < SIZE; x++) {
         // Need to add boundary checking
         for(int y = 0; y < SIZE; y++) {
@@ -75,7 +80,6 @@ void calculateAdvection(struct Point* grid, float timestep) {
             // Maybe turn forward into a forwardStruct at some point?
 
             // Estimate row-by-row x-velocity
-            float tempX1, tempX2, tempX3, tempX4, tempY1, tempY2, tempY3, tempY4;
             float tempX[4];
             float tempY[4];
             for(int n = -1; n <= 2; n++) {
@@ -103,7 +107,7 @@ void calculateAdvection(struct Point* grid, float timestep) {
             // vx, vy = CI(CI(p0..p3, dx), dy)
             // If point is outside the grid, use v = 0 for no-slip boundary conditions
             // Add more quantities (temperature, density, etc) here
-            // Maybe turn forward into a forwardStruct at some point?
+            // Maybe turn backward into a backStruct at some point?
 
             float xPrev = (float)x - forwardX * timestep;
             float yPrev = (float)y - forwardY * timestep;
@@ -114,71 +118,46 @@ void calculateAdvection(struct Point* grid, float timestep) {
             dx = xPrev - i;
             dy = yPrev - j;
 
-            tempX1 = cubicInterpolate(
-                getSafeVx(i - 1, j - 1, grid),
-                getSafeVx(i - 1, j, grid),
-                getSafeVx(i - 1, j + 1, grid),
-                getSafeVx(i - 1, j + 2, grid),
-                dx
-            );
-            tempX2 = cubicInterpolate(
-                getSafeVx(i, j - 1, grid),
-                getSafeVx(i, j, grid),
-                getSafeVx(i, j + 1, grid),
-                getSafeVx(i, j + 2, grid),
-                dx
-            );
-            tempX3 = cubicInterpolate(
-                getSafeVx(i + 1, j - 1, grid),
-                getSafeVx(i + 1, j, grid),
-                getSafeVx(i + 1, j + 1, grid),
-                getSafeVx(i + 1, j + 2, grid),
-                dx
-            );
-            tempX4 = cubicInterpolate(
-                getSafeVx(i + 2, j - 1, grid),
-                getSafeVx(i + 2, j, grid),
-                getSafeVx(i + 2, j + 1, grid),
-                getSafeVx(i + 2, j + 2, grid),
-                dx
-            );
+            float tempXPrev[4];
+            float tempYPrev[4];
 
-            // Estimate row-by-row y-velocity
-            tempY1 = cubicInterpolate(
-                getSafeVy(i - 1, j - 1, grid),
-                getSafeVy(i - 1, j, grid),
-                getSafeVy(i - 1, j + 1, grid),
-                getSafeVy(i - 1, j + 2, grid),
-                dx
-            );
-            tempY2 = cubicInterpolate(
-                getSafeVy(i, j - 1, grid),
-                getSafeVy(i, j, grid),
-                getSafeVy(i, j + 1, grid),
-                getSafeVy(i, j + 2, grid),
-                dx
-            );
-            tempY3 = cubicInterpolate(
-                getSafeVy(i + 1, j - 1, grid),
-                getSafeVy(i + 1, j, grid),
-                getSafeVy(i + 1, j + 1, grid),
-                getSafeVy(i + 1, j + 2, grid),
-                dx
-            );
-            tempY4 = cubicInterpolate(
-                getSafeVy(i + 2, j - 1, grid),
-                getSafeVy(i + 2, j, grid),
-                getSafeVy(i + 2, j + 1, grid),
-                getSafeVy(i + 2, j + 2, grid),
-                dx
-            );
+            for(int n = -1; n <= 2; n++) {
+                tempXPrev[n + 1] = cubicInterpolate(
+                    getSafeVx(i + n, j - 1, grid),
+                    getSafeVx(i + n, j, grid),
+                    getSafeVx(i + n, j + 1, grid),
+                    getSafeVx(i + n, j + 2, grid),
+                    dx
+                );
+                tempYPrev[n + 1] = cubicInterpolate(
+                    getSafeVy(i + n, j - 1, grid),
+                    getSafeVy(i + n, j, grid),
+                    getSafeVy(i + n, j + 1, grid),
+                    getSafeVy(i + n, j + 2, grid),
+                    dx
+                );
+            }
 
             // Calculate backward estimates
-            backwardX = cubicInterpolate(tempX1, tempX2, tempX3, tempX4, dy);
-            backwardY = cubicInterpolate(tempY1, tempY2, tempY3, tempY4, dy);
+            backwardX = cubicInterpolate(tempXPrev[0], tempXPrev[1], tempXPrev[2], tempXPrev[3], dy);
+            backwardY = cubicInterpolate(tempYPrev[0], tempYPrev[1], tempYPrev[2], tempYPrev[3], dy);
 
+            // Calculate corrected value
+            //  Corrected Value = Forward Estimate + 0.5 * (Original Value - Backward Estimate)
+            float correctedX = forwardX + 0.5 * (getAtIndex(x, y, grid).vx - backwardX);
+            float correctedY = forwardY + 0.5 * (getAtIndex(x, y, grid).vy - backwardY);
+
+            // Copy new value into temporary struct
+            setVxAtIndex(x, y, correctedX, tempGrid);
+            setVyAtIndex(x, y, correctedY, tempGrid);
         }
     }
+
+    // Project temporary grid onto permanent grid
+    struct Point* temp = grid;
+    grid = tempGrid;
+    tempGrid = temp;
+    free(tempGrid);
 }
 
 struct Point getAtIndex(int x, int y, struct Point* grid) {
