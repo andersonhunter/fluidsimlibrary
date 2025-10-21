@@ -193,6 +193,11 @@ int main(int argc, char* argv[]) {
     // All boundary points should have 0 velocity for no-slip
     // Pseudo-2D array, index in with pointer arithmetic grid[SIZE * row + column]
     struct Point* grid = (struct Point *)malloc((SIZE * SIZE) * sizeof(Point));
+    for (int row = 0; row < SIZE; row++) {
+        for (int col = 0; col < SIZE; col++) {
+            
+        }
+    }
     for (int i = 0; i < SIZE * SIZE; i++) {
         if (i % SIZE == 0) {
             grid[i].temperature = 0.;
