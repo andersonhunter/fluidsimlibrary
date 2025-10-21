@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 #include "fluid_formulae.h"
 
 #ifndef SIZE
@@ -12,11 +13,11 @@ bool hifi = true;  // Determine if the simulation is higher fidelity
 
 struct Point {
     // A point within the grid which holds different quantities
-    float temperature = 0.;  // Temperature
-    float vx = 0.;           // X-velocity
-    float vy = 0.;           // Y-Velocity
-    float pressure = 0.;     // Temporary pressure, should be 0 after projection
-    float density = 1.;      // Density
+    float temperature;  // Temperature
+    float vx;           // X-velocity
+    float vy;           // Y-Velocity
+    float pressure;     // Temporary pressure, should be 0 after projection
+    float density;      // Density
 };
 
 // Function prototypes
@@ -150,13 +151,12 @@ void calculateAdvection(struct Point* grid, float timestep) {
             // Copy new value into temporary struct
             setVxAtIndex(x, y, correctedX, tempGrid);
             setVyAtIndex(x, y, correctedY, tempGrid);
+            fprintf(stdout, "(%d %d),(%f %f),(%f %f)\n", x, y, getAtIndex(x, y, grid).vx, getAtIndex(x, y, grid).vy, correctedX, correctedY);
         }
     }
 
     // Project temporary grid onto permanent grid
-    struct Point* temp = grid;
-    grid = tempGrid;
-    tempGrid = temp;
+    memcpy(grid, tempGrid, SIZE * SIZE * sizeof(Point));
     free(tempGrid);
 }
 
@@ -190,8 +190,26 @@ float getSafeVy(int x, int y, struct Point* grid) {
 int main(int argc, char* argv[]) {
     
     // Initialize grid of points
+    // All boundary points should have 0 velocity for no-slip
     // Pseudo-2D array, index in with pointer arithmetic grid[SIZE * row + column]
     struct Point* grid = (struct Point *)malloc((SIZE * SIZE) * sizeof(Point));
+    for (int i = 0; i < SIZE * SIZE; i++) {
+        if (i % SIZE == 0) {
+            grid[i].temperature = 0.;
+            grid[i].vx          = 0.;
+            grid[i].vy          = 0.;
+            grid[i].pressure    = 0.;
+            grid[i].density     = 1.;
+        }
+        else {
+            grid[i].temperature = 0.;
+            grid[i].vx          = (float)i / 16.;
+            grid[i].vy          = (float)i / 16.;
+            grid[i].pressure    = 0.;
+            grid[i].density     = 1.;
+        }
+    }
+    fprintf(stdout, "Index,Old,New\n");
     calculateAdvection(grid, 1);
     free(grid);
     return 0;
