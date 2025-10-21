@@ -151,7 +151,13 @@ void calculateAdvection(struct Point* grid, float timestep) {
             // Copy new value into temporary struct
             setVxAtIndex(x, y, correctedX, tempGrid);
             setVyAtIndex(x, y, correctedY, tempGrid);
-            fprintf(stdout, "%d,%d,%f,%f),%f,%f\n", x, y, getAtIndex(x, y, grid).vx, getAtIndex(x, y, grid).vy, correctedX, correctedY);
+
+            // Debug stuff
+            float oldX = getAtIndex(x, y, grid).vx;
+            float oldY = getAtIndex(x, y, grid).vy;
+            float oldMag = sqrt(oldX * oldX + oldY * oldY);
+            float newMag = sqrt(correctedX * correctedX + correctedY * correctedY);
+            fprintf(stdout, "%d,%d,%f,%f,%f,%f,%f,%f\n", x, y, oldX, oldY, correctedX, correctedY, oldMag, newMag);
         }
     }
 
@@ -194,9 +200,10 @@ int main(int argc, char* argv[]) {
     // Pseudo-2D array, index in with pointer arithmetic grid[SIZE * row + column]
     // Currently setting up with a linear spread
     struct Point* grid = (struct Point *)malloc((SIZE * SIZE) * sizeof(Point));
+    fprintf(stdout, "XCoord,YCoord,OldX,OldY,NewX,NewY,OldMag,NewMag\n");
     for (int row = 0; row < SIZE; row++) {
         for (int col = 0; col < SIZE; col++) {
-            if (row == 0 || row == SIZE - 1 || col % SIZE - 1 == 0) {
+            if (row == 0 || row == SIZE - 1 || col % (SIZE - 1) == 0) {
                 grid[SIZE * row + col].temperature = 0.;
                 grid[SIZE * row + col].vx          = 0.;
                 grid[SIZE * row + col].vy          = 0.;
@@ -212,7 +219,6 @@ int main(int argc, char* argv[]) {
             }
         }
     }
-    fprintf(stdout, "X Index,Y Index,Old X,Old Y,New X,New Y\n");
     calculateAdvection(grid, 1);
     free(grid);
     return 0;
