@@ -76,68 +76,28 @@ void calculateAdvection(struct Point* grid, float timestep) {
 
             // Estimate row-by-row x-velocity
             float tempX1, tempX2, tempX3, tempX4, tempY1, tempY2, tempY3, tempY4;
-            tempX1 = cubicInterpolate(
-                getSafeVx(i - 1, j - 1, grid),
-                getSafeVx(i - 1, j, grid),
-                getSafeVx(i - 1, j + 1, grid),
-                getSafeVx(i - 1, j + 2, grid),
-                dx
-            );
-            tempX2 = cubicInterpolate(
-                getSafeVx(i, j - 1, grid),
-                getSafeVx(i, j, grid),
-                getSafeVx(i, j + 1, grid),
-                getSafeVx(i, j + 2, grid),
-                dx
-            );
-            tempX3 = cubicInterpolate(
-                getSafeVx(i + 1, j - 1, grid),
-                getSafeVx(i + 1, j, grid),
-                getSafeVx(i + 1, j + 1, grid),
-                getSafeVx(i + 1, j + 2, grid),
-                dx
-            );
-            tempX4 = cubicInterpolate(
-                getSafeVx(i + 2, j - 1, grid),
-                getSafeVx(i + 2, j, grid),
-                getSafeVx(i + 2, j + 1, grid),
-                getSafeVx(i + 2, j + 2, grid),
-                dx
-            );
-
-            // Estimate row-by-row y-velocity
-            tempY1 = cubicInterpolate(
-                getSafeVy(i - 1, j - 1, grid),
-                getSafeVy(i - 1, j, grid),
-                getSafeVy(i - 1, j + 1, grid),
-                getSafeVy(i - 1, j + 2, grid),
-                dx
-            );
-            tempY2 = cubicInterpolate(
-                getSafeVy(i, j - 1, grid),
-                getSafeVy(i, j, grid),
-                getSafeVy(i, j + 1, grid),
-                getSafeVy(i, j + 2, grid),
-                dx
-            );
-            tempY3 = cubicInterpolate(
-                getSafeVy(i + 1, j - 1, grid),
-                getSafeVy(i + 1, j, grid),
-                getSafeVy(i + 1, j + 1, grid),
-                getSafeVy(i + 1, j + 2, grid),
-                dx
-            );
-            tempY4 = cubicInterpolate(
-                getSafeVy(i + 2, j - 1, grid),
-                getSafeVy(i + 2, j, grid),
-                getSafeVy(i + 2, j + 1, grid),
-                getSafeVy(i + 2, j + 2, grid),
-                dx
-            );
+            float tempX[4];
+            float tempY[4];
+            for(int n = -1; n <= 2; n++) {
+                tempX[n + 1] = cubicInterpolate(
+                    getSafeVx(i + n, j - 1, grid),
+                    getSafeVx(i + n, j, grid),
+                    getSafeVx(i + n, j + 1, grid),
+                    getSafeVx(i + n, j + 2, grid),
+                    dx
+                );
+                tempY[n + 1] = cubicInterpolate(
+                    getSafeVy(i + n, j - 1, grid),
+                    getSafeVy(i + n, j, grid),
+                    getSafeVy(i + n, j + 1, grid),
+                    getSafeVy(i + n, j + 2, grid),
+                    dx
+                );
+            }
 
             // Calculate forward estimates
-            forwardX = cubicInterpolate(tempX1, tempX2, tempX3, tempX4, dy);
-            forwardY = cubicInterpolate(tempY1, tempY2, tempY3, tempY4, dy);
+            forwardX = cubicInterpolate(tempX[0], tempX[1], tempX[2], tempX[3], dy);
+            forwardY = cubicInterpolate(tempY[0], tempY[1], tempY[2], tempY[3], dy);
 
             // Back trace the point and interpolate x and y velocities
             // vx, vy = CI(CI(p0..p3, dx), dy)
@@ -253,6 +213,7 @@ int main(int argc, char* argv[]) {
     // Initialize grid of points
     // Pseudo-2D array, index in with pointer arithmetic grid[SIZE * row + column]
     struct Point* grid = (struct Point *)malloc((SIZE * SIZE) * sizeof(Point));
+    calculateAdvection(grid, 1);
     free(grid);
     return 0;
 }
