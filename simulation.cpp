@@ -62,7 +62,7 @@ void calculateAdvection(struct Point* grid, float timestep) {
 
     for(int x = 0; x < SIZE; x++) {
         // Need to add boundary checking
-        fprintf(stdout, "%d,,", x);
+        //fprintf(stdout, "%d,,", x);
         for(int y = 0; y < SIZE; y++) {
             float forwardX, forwardY;
             float backwardX, backwardY;
@@ -155,13 +155,13 @@ void calculateAdvection(struct Point* grid, float timestep) {
             setVyAtIndex(x, y, correctedY, tempGrid);
 
             // Debug stuff
-            float oldX = getAtIndex(x, y, grid).vx;
-            float oldY = getAtIndex(x, y, grid).vy;
-            float oldMag = sqrt(oldX * oldX + oldY * oldY);
-            float newMag = sqrt(correctedX * correctedX + correctedY * correctedY);
-            fprintf(stdout, "%.3f,", newMag);
+            //float oldX = getAtIndex(x, y, grid).vx;
+            //float oldY = getAtIndex(x, y, grid).vy;
+            //float oldMag = sqrt(oldX * oldX + oldY * oldY);
+            //float newMag = sqrt(correctedX * correctedX + correctedY * correctedY);
+            //fprintf(stdout, "%.3f,", newMag);
         }
-        fprintf(stdout, "\n");
+        //fprintf(stdout, "\n");
     }
 
     // Project temporary grid onto permanent grid
@@ -221,10 +221,21 @@ int main(int argc, char* argv[]) {
             }
         }
     }
-    fprintf(stdout, "0,1,2,3,4,5,6,7,8,9,10\n\n");
+    //fprintf(stdout, "0,1,2,3,4,5,6,7,8,9,10\n\n");
+    fprintf(stdout, "t,x,y\n0,0,0\n");
+    float xpos = 2.;
+    float tempx = 2.;
+    float ypos = 2.;
+    float tempy = 2.;
     for(float i = 0.; i <= 1.; i += 0.1) {
-        fprintf(stdout, "\ntimestep = %.1f\n", i);
+        //fprintf(stdout, "\ntimestep = %.1f\n", i);
         calculateAdvection(grid, i);
+        xpos += getAtIndex(floor(tempx), floor(tempy), grid).vx;
+        ypos += getAtIndex(floor(tempx), floor(tempy), grid).vy;
+        tempx = xpos;
+        tempy = ypos;
+
+        fprintf(stdout, "%d,%f,%f\n", (int)i, xpos, ypos);
     }
 
     free(grid);
