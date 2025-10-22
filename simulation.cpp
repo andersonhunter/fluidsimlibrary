@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
+#include <time.h>
 #include "fluid_formulae.h"
 
 #ifndef SIZE
@@ -61,6 +62,7 @@ void calculateAdvection(struct Point* grid, float timestep) {
 
     for(int x = 0; x < SIZE; x++) {
         // Need to add boundary checking
+        fprintf(stdout, "%d,,", x);
         for(int y = 0; y < SIZE; y++) {
             float forwardX, forwardY;
             float backwardX, backwardY;
@@ -157,8 +159,9 @@ void calculateAdvection(struct Point* grid, float timestep) {
             float oldY = getAtIndex(x, y, grid).vy;
             float oldMag = sqrt(oldX * oldX + oldY * oldY);
             float newMag = sqrt(correctedX * correctedX + correctedY * correctedY);
-            fprintf(stdout, "%d,%d,%f,%f,%f,%f,%f,%f\n", x, y, oldX, oldY, correctedX, correctedY, oldMag, newMag);
+            fprintf(stdout, "%.3f,", newMag);
         }
+        fprintf(stdout, "\n");
     }
 
     // Project temporary grid onto permanent grid
@@ -200,7 +203,6 @@ int main(int argc, char* argv[]) {
     // Pseudo-2D array, index in with pointer arithmetic grid[SIZE * row + column]
     // Currently setting up with a linear spread
     struct Point* grid = (struct Point *)malloc((SIZE * SIZE) * sizeof(Point));
-    fprintf(stdout, "XCoord,YCoord,OldX,OldY,NewX,NewY,OldMag,NewMag\n");
     for (int row = 0; row < SIZE; row++) {
         for (int col = 0; col < SIZE; col++) {
             if (row == 0 || row == SIZE - 1 || col % (SIZE - 1) == 0) {
@@ -212,14 +214,19 @@ int main(int argc, char* argv[]) {
             }
             else {
                 grid[SIZE * row + col].temperature = 0.;
-                grid[SIZE * row + col].vx          = (float)col / 16.;
-                grid[SIZE * row + col].vy          = (float)col / 16.;
+                grid[SIZE * row + col].vx          = 1. - ((float)col / 15.);
+                grid[SIZE * row + col].vy          = 1. - ((float)col / 15.);
                 grid[SIZE * row + col].pressure    = 0.;
                 grid[SIZE * row + col].density     = 1.;
             }
         }
     }
-    calculateAdvection(grid, 1);
+    fprintf(stdout, "0,1,2,3,4,5,6,7,8,9,10\n\n");
+    for(float i = 0.; i <= 1.; i += 0.1) {
+        fprintf(stdout, "\ntimestep = %.1f\n", i);
+        calculateAdvection(grid, i);
+    }
+
     free(grid);
     return 0;
 }
