@@ -9,6 +9,10 @@
 #define SIZE 16
 #endif
 
+#ifndef DEBUG
+#define DEBUG true
+#endif
+
 // Eventually, add in ability to switch between bilinear interp and bicubic for performance vs accuracy
 bool hifi = true;  // Determine if the simulation is higher fidelity
 
@@ -222,20 +226,36 @@ int main(int argc, char* argv[]) {
         }
     }
     //fprintf(stdout, "0,1,2,3,4,5,6,7,8,9,10\n\n");
-    fprintf(stdout, "t,x,y\n0,0,0\n");
-    float xpos = 2.;
-    float tempx = 2.;
-    float ypos = 2.;
-    float tempy = 2.;
-    for(float i = 0.; i <= 1.; i += 0.1) {
+    fprintf(stdout, "t,x,y\n0,1,1,,2,2\n");
+    float xpos = 1.;
+    float tempx = 1.;
+    float ypos = 1.;
+    float tempy = 1.;
+
+    float xpos1 = 2.;
+    float tempx1 = 2.;
+    float ypos1 = 2.;
+    float tempy1 = 2.;
+
+    for(float i = 0.; i <= 15.1; i += 0.1) {
         //fprintf(stdout, "\ntimestep = %.1f\n", i);
         calculateAdvection(grid, i);
-        xpos += getAtIndex(floor(tempx), floor(tempy), grid).vx;
-        ypos += getAtIndex(floor(tempx), floor(tempy), grid).vy;
-        tempx = xpos;
-        tempy = ypos;
 
-        fprintf(stdout, "%d,%f,%f\n", (int)i, xpos, ypos);
+        // Debug stuff, track pathlines for two points
+        if (DEBUG) {
+            xpos += getAtIndex(floor(tempx), floor(tempy), grid).vx;
+            ypos += getAtIndex(floor(tempx), floor(tempy), grid).vy;
+            tempx = xpos;
+            tempy = ypos;
+
+            xpos1 += getAtIndex(floor(tempx1), floor(tempy1), grid).vx;
+            ypos1 += getAtIndex(floor(tempx1), floor(tempy1), grid).vy;
+            tempx1 = xpos1;
+            tempy1 = ypos1;
+
+            fprintf(stdout, "%.1f,%.3f,%.3f,,%.3f,%.3f\n", i, xpos, ypos, xpos1, ypos1);
+        }
+        
     }
 
     free(grid);
