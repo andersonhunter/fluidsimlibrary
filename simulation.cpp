@@ -190,14 +190,14 @@ void setVyAtIndex(int x, int y, float vy, struct Point* grid) {
 
 float getSafeVx(int x, int y, struct Point* grid) {
     // Helper function to safely get the x-velocity at a given index
-    // Returns 0 if the index is OOB
-    return (x >= 0 && x < SIZE && y >= 0 && y < SIZE) ? getAtIndex(x, y, grid).vx : 0.;
+    // Returns 0 if the index is OOB or within boundary layer
+    return (x > 0 && x < (SIZE - 1) && y > 0 && y < (SIZE - 1)) ? getAtIndex(x, y, grid).vx : 0.;
 }
 
 float getSafeVy(int x, int y, struct Point* grid) {
     // Helper function to safely get the y-velocity at a given index
-    // Returns 0 if the index is OOB
-    return (x >= 0 && x < SIZE && y >= 0 && y < SIZE) ? getAtIndex(x, y, grid).vy : 0.;
+    // Returns 0 if the index is OOB or within boundary layer
+    return (x > 0 && x < (SIZE - 1) && y > 0 && y < (SIZE - 1)) ? getAtIndex(x, y, grid).vy : 0.;
 }
 
 int main(int argc, char* argv[]) {
