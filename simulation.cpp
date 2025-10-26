@@ -157,15 +157,18 @@ void calculateAdvection(struct Point* grid, float timestep) {
             // Copy new value into temporary struct
             setVxAtIndex(x, y, correctedX, tempGrid);
             setVyAtIndex(x, y, correctedY, tempGrid);
-
-            // Debug stuff
-            //float oldX = getAtIndex(x, y, grid).vx;
-            //float oldY = getAtIndex(x, y, grid).vy;
-            //float oldMag = sqrt(oldX * oldX + oldY * oldY);
-            //float newMag = sqrt(correctedX * correctedX + correctedY * correctedY);
-            //fprintf(stdout, "%.3f,", newMag);
+            if(DEBUG)
+            {    // Debug stuff
+                //float oldX = getAtIndex(x, y, grid).vx;
+                //float oldY = getAtIndex(x, y, grid).vy;
+                //float oldMag = sqrt(oldX * oldX + oldY * oldY);
+                //float newMag = sqrt(correctedX * correctedX + correctedY * correctedY);
+                //fprintf(stdout, "%.3f,", newMag);
+                }
         }
-        //fprintf(stdout, "\n");
+        if(DEBUG) {
+            //fprintf(stdout, "\n")'
+        }
     }
 
     // Project temporary grid onto permanent grid
@@ -225,8 +228,11 @@ int main(int argc, char* argv[]) {
             }
         }
     }
-    //fprintf(stdout, "0,1,2,3,4,5,6,7,8,9,10\n\n");
-    fprintf(stdout, "t,x,y\n0,1,1,,2,2\n");
+    if (DEBUG) {
+        //fprintf(stdout, "0,1,2,3,4,5,6,7,8,9,10\n\n");
+        fprintf(stdout, "t,x,y\n0,1,1,,2,2\n");
+    }
+    
     float xpos = 1.;
     float tempx = 1.;
     float ypos = 1.;
