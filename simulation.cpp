@@ -3,7 +3,8 @@
 #include <math.h>
 #include <string.h>
 #include <time.h>
-#include "fluid_formulae.h"
+// Uncomment if doing any conversions or calculations
+//#include "fluid_formulae.h"
 
 #ifndef SIZE
 #define SIZE 16
