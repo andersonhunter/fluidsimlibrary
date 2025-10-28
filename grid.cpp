@@ -198,6 +198,7 @@ GLuint	AxesList;				// list to hold the axes
 int		AxesOn;					// != 0 means to draw the axes
 GLuint	GridList;				// object display list
 GLuint	VectorArrows[SIZE * SIZE];
+GLuint 	ArrowList;
 GLuint	BackgroundList;
 int		DebugOn;				// != 0 means to print debugging info
 int		DepthCueOn;				// != 0 means to use intensity depth cueing
@@ -504,12 +505,20 @@ Display( )
 	glPushMatrix();
 	glCallList(GridList);
 	glPopMatrix();
-
-	for (int i = 0; i < SIZE * SIZE; i++) {
-		glPushMatrix();
-		glCallList(VectorArrows[i]);
-		glPopMatrix();
+	
+	// Draw one arrow per cell
+	for (int row = 0; row < SIZE; row++) {
+		for (int col = 0; col < SIZE; col++) {
+			glPushMatrix();
+			glTranslatef()
+		}
 	}
+
+	// for (int i = 0; i < SIZE * SIZE; i++) {
+	// 	glPushMatrix();
+	// 	glCallList(VectorArrows[i]);
+	// 	glPopMatrix();
+	// }
 
 	glPushMatrix();
 	glCallList(BackgroundList);
@@ -855,28 +864,42 @@ InitLists( )
 		glEnd();
 	glEndList();
 
-	// Draw the arrows
-	float size2 = (float)SIZE / 2.;
-	for (int row = 0; row < SIZE; row++) {
-		for (int col = 0; col < SIZE; col++) {
-			VectorArrows[row * SIZE + col] = glGenLists(1);
-			glNewList(VectorArrows[row * SIZE + col], GL_COMPILE);
-				glBegin(GL_LINE_STRIP);
-				glColor3f(0., 0., 1.);
-				// Left point on arrow
-				glVertex3f(CELLSIZE * ((float)col + 0.1 - size2), 0., CELLSIZE * ((float)row + 0.5 - size2));
-				// Right point on arrow
-				glVertex3f(CELLSIZE * ((float)col + 0.9 - size2), 0., CELLSIZE * ((float)row + 0.5 - size2));
-				// Bottom lip of arrow
-				glVertex3f(CELLSIZE * ((float)col + 0.9 - size2) - ARROWFRAC, 0., CELLSIZE * ((float)row + 0.5 - size2) + ARROWFRAC);
-				// Back up to the right point of arrow
-				glVertex3f(CELLSIZE * ((float)col + 0.9 - size2), 0., CELLSIZE * ((float)row + 0.5 - size2));
-				// Top lip of arrow
-				glVertex3f(CELLSIZE * ((float)col + 0.9 - size2) - ARROWFRAC, 0., CELLSIZE * ((float)row + 0.5 - size2) - ARROWFRAC);
-				glEnd();
-			glEndList();
-		}
-	}
+	// Draw the arrow
+	ArrowList = glGenLists(1);
+	glNewList(ArrowList, GL_COMPILE);
+		glBegin(GL_LINE_STRIP);
+		// Left side of arrow
+		glVertex3f(-CELLSIZE / 2., 0., 0.);
+		// R side of arrow
+		glVertex3f(CELLSIZE / 2., 0., 0.);
+		// Bottom point of arrow
+		glVertex3f((CELLSIZE / 2.) - ARROWFRAC, 0., (CELLSIZE / 2.) + ARROWFRAC);
+		// Back to the right side
+		glVertex3f(CELLSIZE / 2., 0., 0.);
+		// Aaaaand up to the top
+		glVertex3f((CELLSIZE / 2.) - ARROWFRAC, 0., (CELLSIZE / 2.) - ARROWFRAC);
+
+	// float size2 = (float)SIZE / 2.;
+	// for (int row = 0; row < SIZE; row++) {
+	// 	for (int col = 0; col < SIZE; col++) {
+	// 		VectorArrows[row * SIZE + col] = glGenLists(1);
+	// 		glNewList(VectorArrows[row * SIZE + col], GL_COMPILE);
+	// 			glBegin(GL_LINE_STRIP);
+	// 			glColor3f(0., 0., 1.);
+	// 			// Left point on arrow
+	// 			glVertex3f(CELLSIZE * ((float)col + 0.1 - size2), 0., CELLSIZE * ((float)row + 0.5 - size2));
+	// 			// Right point on arrow
+	// 			glVertex3f(CELLSIZE * ((float)col + 0.9 - size2), 0., CELLSIZE * ((float)row + 0.5 - size2));
+	// 			// Bottom lip of arrow
+	// 			glVertex3f(CELLSIZE * ((float)col + 0.9 - size2) - ARROWFRAC, 0., CELLSIZE * ((float)row + 0.5 - size2) + ARROWFRAC);
+	// 			// Back up to the right point of arrow
+	// 			glVertex3f(CELLSIZE * ((float)col + 0.9 - size2), 0., CELLSIZE * ((float)row + 0.5 - size2));
+	// 			// Top lip of arrow
+	// 			glVertex3f(CELLSIZE * ((float)col + 0.9 - size2) - ARROWFRAC, 0., CELLSIZE * ((float)row + 0.5 - size2) - ARROWFRAC);
+	// 			glEnd();
+	// 		glEndList();
+	// 	}
+	// }
 
 	// Draw a backboard for the grid
 	BackgroundList = glGenLists(1);
