@@ -510,7 +510,9 @@ Display( )
 	for (int row = 0; row < SIZE; row++) {
 		for (int col = 0; col < SIZE; col++) {
 			glPushMatrix();
-			glTranslatef()
+			glTranslatef((float)row * CELLSIZE + 0.5 * CELLSIZE, 0., (float)row * CELLSIZE + 0.5 * CELLSIZE);
+			glCallList(ArrowList);
+			glPopMatrix();
 		}
 	}
 
