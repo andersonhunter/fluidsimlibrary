@@ -92,6 +92,7 @@ void calculateAdvection(float timestep) {
     //   Interpolate value at that point
     //   Store as backward estimate
     // Corrected Value = Forward Estimate + 0.5 * (Original Value - Backward Estimate)
+    // Then, project onto a divergence-free field using Poisson projection and a Jacobi solver
     // Save the corrected point in the temporary struct, then swap out when done
     
     //TODO: Maybe add a minmod limiter or filtering to prevent oscillations
