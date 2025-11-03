@@ -26,14 +26,31 @@ struct Point {
     float density;      // Density
 };
 
+struct Point* grid;
+
 // Function prototypes
-void calculateAdvection(struct Point* grid, float timestep);
-struct Point getAtIndex(int x, int y, struct Point* grid);
-void setVxAtIndex(int x, int y, float vx, struct Point* grid);
-void setVyAtIndex(int x, int y, float vy, struct Point* grid);
+void calculateAdvection(float timestep);
+struct Point getAtIndex(int x, int y);
+void setVxAtIndex(int x, int y, float vx);
+void setVyAtIndex(int x, int y, float vy);
 float cubicInterpolate(float p0, float p1, float p2, float p3, float dt);
-float getSafeVx(int x, int y, struct Point* grid);
-float getSafeVy(int x, int y, struct Point* grid);
+float getSafeVx(int x, int y);
+float getSafeVy(int x, int y);
+void initGrid();
+
+void initGrid() {
+    // Initialize 2D grid with 0 values for all except density
+    grid = (struct Point *)malloc((SIZE * SIZE) * sizeof(Point));
+    for (int row = 0; row < SIZE; row++) {
+        for (int col = 0; col < SIZE; col++) {
+            grid[SIZE * row + col].temperature = 0.;
+                grid[SIZE * row + col].vx          = 0.;
+                grid[SIZE * row + col].vy          = 0.;
+                grid[SIZE * row + col].pressure    = 0.;
+                grid[SIZE * row + col].density     = 1.;
+        }
+    }
+}
 
 float cubicInterpolate(float p0, float p1, float p2, float p3, float dt) {
     // Perform Centripetal Catmull-Rom interpolation to determine advected value
@@ -45,7 +62,7 @@ float cubicInterpolate(float p0, float p1, float p2, float p3, float dt) {
     return dt * (dt * (a0 * dt + a1) + a2) + p1;
 }
 
-void calculateAdvection(struct Point* grid, float timestep) {
+void calculateAdvection(float timestep) {
     // Use the MacCormack Method
     // Do a forward pass to estimate advection at each point using the Semi-Lagrangian method
     //   Trace forward along the velocity field to the estimated new location of the fluid
@@ -73,8 +90,8 @@ void calculateAdvection(struct Point* grid, float timestep) {
             float backwardX, backwardY;
             // Calculate the forward estimate
             // Get next (x, y) coords
-            float xNext = (float)x + getAtIndex(x, y, grid).vx * timestep;
-            float yNext = (float)y + getAtIndex(x, y, grid).vy * timestep;
+            float xNext = (float)x + getAtIndex(x, y).vx * timestep;
+            float yNext = (float)y + getAtIndex(x, y).vy * timestep;
             // Round to nearest whole index
             int i = floor(xNext);
             int j = floor(yNext);
@@ -92,17 +109,17 @@ void calculateAdvection(struct Point* grid, float timestep) {
             float tempY[4];
             for(int n = -1; n <= 2; n++) {
                 tempX[n + 1] = cubicInterpolate(
-                    getSafeVx(i + n, j - 1, grid),
-                    getSafeVx(i + n, j, grid),
-                    getSafeVx(i + n, j + 1, grid),
-                    getSafeVx(i + n, j + 2, grid),
+                    getSafeVx(i + n, j - 1),
+                    getSafeVx(i + n, j),
+                    getSafeVx(i + n, j + 1),
+                    getSafeVx(i + n, j + 2),
                     dx
                 );
                 tempY[n + 1] = cubicInterpolate(
-                    getSafeVy(i + n, j - 1, grid),
-                    getSafeVy(i + n, j, grid),
-                    getSafeVy(i + n, j + 1, grid),
-                    getSafeVy(i + n, j + 2, grid),
+                    getSafeVy(i + n, j - 1),
+                    getSafeVy(i + n, j),
+                    getSafeVy(i + n, j + 1),
+                    getSafeVy(i + n, j + 2),
                     dx
                 );
             }
@@ -131,17 +148,17 @@ void calculateAdvection(struct Point* grid, float timestep) {
 
             for(int n = -1; n <= 2; n++) {
                 tempXPrev[n + 1] = cubicInterpolate(
-                    getSafeVx(i + n, j - 1, grid),
-                    getSafeVx(i + n, j, grid),
-                    getSafeVx(i + n, j + 1, grid),
-                    getSafeVx(i + n, j + 2, grid),
+                    getSafeVx(i + n, j - 1),
+                    getSafeVx(i + n, j),
+                    getSafeVx(i + n, j + 1),
+                    getSafeVx(i + n, j + 2),
                     dx
                 );
                 tempYPrev[n + 1] = cubicInterpolate(
-                    getSafeVy(i + n, j - 1, grid),
-                    getSafeVy(i + n, j, grid),
-                    getSafeVy(i + n, j + 1, grid),
-                    getSafeVy(i + n, j + 2, grid),
+                    getSafeVy(i + n, j - 1),
+                    getSafeVy(i + n, j),
+                    getSafeVy(i + n, j + 1),
+                    getSafeVy(i + n, j + 2),
                     dx
                 );
             }
@@ -152,12 +169,12 @@ void calculateAdvection(struct Point* grid, float timestep) {
 
             // Calculate corrected value
             //  Corrected Value = Forward Estimate + 0.5 * (Original Value - Backward Estimate)
-            float correctedX = forwardX + 0.5 * (getAtIndex(x, y, grid).vx - backwardX);
-            float correctedY = forwardY + 0.5 * (getAtIndex(x, y, grid).vy - backwardY);
+            float correctedX = forwardX + 0.5 * (getAtIndex(x, y).vx - backwardX);
+            float correctedY = forwardY + 0.5 * (getAtIndex(x, y).vy - backwardY);
 
             // Copy new value into temporary struct
-            setVxAtIndex(x, y, correctedX, tempGrid);
-            setVyAtIndex(x, y, correctedY, tempGrid);
+            tempGrid[SIZE * x + y].vx = correctedX;
+            tempGrid[SIZE * x + y].vy = correctedY;
             if(DEBUG)
             {    // Debug stuff
                 //float oldX = getAtIndex(x, y, grid).vx;
@@ -177,94 +194,35 @@ void calculateAdvection(struct Point* grid, float timestep) {
     free(tempGrid);
 }
 
-struct Point getAtIndex(int x, int y, struct Point* grid) {
+struct Point getAtIndex(int x, int y) {
     // Retrieve a point at the given index from the grid
     // Grid[x][y] = grid[SIZE * x + y]
     return grid[SIZE * x + y];
 }
 
-void setVxAtIndex(int x, int y, float vx, struct Point* grid) {
+void setVxAtIndex(int x, int y, float vx) {
     // Set x-velocity at a given index
     grid[SIZE * x + y].vx = vx;
 }
 
-void setVyAtIndex(int x, int y, float vy, struct Point* grid) {
+void setVyAtIndex(int x, int y, float vy) {
     grid[SIZE * x + y].vy = vy;
 }
 
-float getSafeVx(int x, int y, struct Point* grid) {
+float getSafeVx(int x, int y) {
     // Helper function to safely get the x-velocity at a given index
     // Returns 0 if the index is OOB or within boundary layer
-    return (x > 0 && x < (SIZE - 1) && y > 0 && y < (SIZE - 1)) ? getAtIndex(x, y, grid).vx : 0.;
+    return (x > 0 && x < (SIZE - 1) && y > 0 && y < (SIZE - 1)) ? getAtIndex(x, y).vx : 0.;
 }
 
-float getSafeVy(int x, int y, struct Point* grid) {
+float getSafeVy(int x, int y) {
     // Helper function to safely get the y-velocity at a given index
     // Returns 0 if the index is OOB or within boundary layer
-    return (x > 0 && x < (SIZE - 1) && y > 0 && y < (SIZE - 1)) ? getAtIndex(x, y, grid).vy : 0.;
+    return (x > 0 && x < (SIZE - 1) && y > 0 && y < (SIZE - 1)) ? getAtIndex(x, y).vy : 0.;
 }
 
 int main(int argc, char* argv[]) {
-    
-    // Initialize grid of points
-    // All boundary points should have 0 velocity for no-slip
-    // Pseudo-2D array, index in with pointer arithmetic grid[SIZE * row + column]
-    // Currently setting up with a linear spread
-    struct Point* grid = (struct Point *)malloc((SIZE * SIZE) * sizeof(Point));
-    for (int row = 0; row < SIZE; row++) {
-        for (int col = 0; col < SIZE; col++) {
-            if (row == 0 || row == SIZE - 1 || col % (SIZE - 1) == 0) {
-                grid[SIZE * row + col].temperature = 0.;
-                grid[SIZE * row + col].vx          = 0.;
-                grid[SIZE * row + col].vy          = 0.;
-                grid[SIZE * row + col].pressure    = 0.;
-                grid[SIZE * row + col].density     = 1.;
-            }
-            else {
-                grid[SIZE * row + col].temperature = 0.;
-                grid[SIZE * row + col].vx          = 1. - ((float)col / 15.);
-                grid[SIZE * row + col].vy          = 1. - ((float)col / 15.);
-                grid[SIZE * row + col].pressure    = 0.;
-                grid[SIZE * row + col].density     = 1.;
-            }
-        }
-    }
-    if (DEBUG) {
-        //fprintf(stdout, "0,1,2,3,4,5,6,7,8,9,10\n\n");
-        fprintf(stdout, "t,x,y\n0,1,1,,2,2\n");
-    }
-    
-    float xpos = 1.;
-    float tempx = 1.;
-    float ypos = 1.;
-    float tempy = 1.;
-
-    float xpos1 = 2.;
-    float tempx1 = 2.;
-    float ypos1 = 2.;
-    float tempy1 = 2.;
-
-    for(float i = 0.; i <= 15.1; i += 0.1) {
-        //fprintf(stdout, "\ntimestep = %.1f\n", i);
-        calculateAdvection(grid, i);
-
-        // Debug stuff, track pathlines for two points
-        if (DEBUG) {
-            xpos += getAtIndex(floor(tempx), floor(tempy), grid).vx;
-            ypos += getAtIndex(floor(tempx), floor(tempy), grid).vy;
-            tempx = xpos;
-            tempy = ypos;
-
-            xpos1 += getAtIndex(floor(tempx1), floor(tempy1), grid).vx;
-            ypos1 += getAtIndex(floor(tempx1), floor(tempy1), grid).vy;
-            tempx1 = xpos1;
-            tempy1 = ypos1;
-
-            fprintf(stdout, "%.1f,%.3f,%.3f,,%.3f,%.3f\n", i, xpos, ypos, xpos1, ypos1);
-        }
-        
-    }
-
+    initGrid();
     free(grid);
     return 0;
 }
