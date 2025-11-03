@@ -37,6 +37,7 @@ float cubicInterpolate(float p0, float p1, float p2, float p3, float dt);
 float getSafeVx(int x, int y);
 float getSafeVy(int x, int y);
 void initGrid();
+void solveDivergence(int x, int y);
 
 void initGrid() {
     // Initialize 2D grid with 0 values for all except density
