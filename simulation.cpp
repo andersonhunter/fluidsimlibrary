@@ -6,12 +6,19 @@
 // Uncomment if doing any conversions or calculations
 //#include "fluid_formulae.h"
 
+// Size of the grid
 #ifndef SIZE
 #define SIZE 16
 #endif
 
 #ifndef DEBUG
 #define DEBUG true
+#endif
+
+// Number of Jacobi iterations to perform
+// More iterations = more resolution (but more computation time ):
+#ifndef JACOBIS
+#define JACOBIS 30
 #endif
 
 // Eventually, add in ability to switch between bilinear interp and bicubic for performance vs accuracy
