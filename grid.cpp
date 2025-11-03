@@ -1,3 +1,5 @@
+// openGL and Glut adapted from CS450 starter code from Professor Mike Bailey, Oregon State University
+
 #include <stdio.h>
 #include <stdlib.h>
 #define _USE_MATH_DEFINES
@@ -80,6 +82,7 @@ const float CELLSIZE = 2.;
 
 // Proportion of the arrow size that the lil points comprise
 const float ARROWFRAC = 0.6;
+const float ARROWOFF = 0.2; // Offset of arrow within cell
 
 // multiplication factors for input interaction:
 //  (these are known from previous experience)
@@ -183,22 +186,13 @@ const float	WHITE[ ] = { 1.,1.,1.,1. };
 
 const int MS_PER_CYCLE = 10000;		// 10000 milliseconds = 10 seconds
 
-
-// what options should we compile-in?
-// in general, you don't need to worry about these
-// i compile these in to show class examples of things going wrong
-//#define DEMO_Z_FIGHTING
-//#define DEMO_DEPTH_BUFFER
-
-
 // non-constant global variables:
 
 int		ActiveButton;			// current button that is down
 GLuint	AxesList;				// list to hold the axes
 int		AxesOn;					// != 0 means to draw the axes
 GLuint	GridList;				// object display list
-GLuint	VectorArrows[SIZE * SIZE];
-GLuint 	ArrowList;
+GLuint	ArrowList;
 GLuint	BackgroundList;
 int		DebugOn;				// != 0 means to print debugging info
 int		DepthCueOn;				// != 0 means to use intensity depth cueing
@@ -412,11 +406,6 @@ Display( )
 	glClear( GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT );
 
 	glEnable( GL_DEPTH_TEST );
-#ifdef DEMO_DEPTH_BUFFER
-	if( DepthBufferOn == 0 )
-		glDisable( GL_DEPTH_TEST );
-#endif
-
 
 	// specify shading to be flat:
 
@@ -450,7 +439,7 @@ Display( )
 
 	// set the eye position, look-at position, and up-vector:
 
-	gluLookAt( 0.f, 0.f, 3.f,     0.f, 0.f, 0.f,     0.f, 1.f, 0.f );
+	gluLookAt( 0.f, 30.f, 3.f,     0.f, 0.f, 0.f,     0.f, 1.f, 0.f );
 
 	// rotate the scene:
 
@@ -505,66 +494,22 @@ Display( )
 	glPushMatrix();
 	glCallList(GridList);
 	glPopMatrix();
-	
-	// Draw one arrow per cell
+
+	// Not rotating, need to only define one arrow at the origin, then update the direction based on vector field at each frame
+	// Rotate, then transform
 	for (int row = 0; row < SIZE; row++) {
 		for (int col = 0; col < SIZE; col++) {
 			glPushMatrix();
-			glTranslatef((float)row * CELLSIZE + 0.5 * CELLSIZE, 0., (float)row * CELLSIZE + 0.5 * CELLSIZE);
+			glTranslatef(CELLSIZE * (0.5 - 0.5 * (float)SIZE + col), 0., CELLSIZE * (0.5 - 0.5 * (float)SIZE + row));
+			// glRotatef(15. * row + col, 0., 1., 0.);
 			glCallList(ArrowList);
 			glPopMatrix();
 		}
 	}
 
-	// for (int i = 0; i < SIZE * SIZE; i++) {
-	// 	glPushMatrix();
-	// 	glCallList(VectorArrows[i]);
-	// 	glPopMatrix();
-	// }
-
 	glPushMatrix();
 	glCallList(BackgroundList);
 	glPopMatrix();
-
-#ifdef DEMO_Z_FIGHTING
-	if( DepthFightingOn != 0 )
-	{
-		glPushMatrix( );
-			glRotatef( 90.f,   0.f, 1.f, 0.f );
-			glCallList( BoxList );
-		glPopMatrix( );
-	}
-#endif
-
-
-	// draw some gratuitous text that just rotates on top of the scene:
-	// i commented out the actual text-drawing calls -- put them back in if you have a use for them
-	// a good use for thefirst one might be to have your name on the screen
-	// a good use for the second one might be to have vertex numbers on the screen alongside each vertex
-
-	glDisable( GL_DEPTH_TEST );
-	glColor3f( 0.f, 1.f, 1.f );
-	//DoRasterString( 0.f, 1.f, 0.f, (char *)"Text That Moves" );
-
-
-	// draw some gratuitous text that is fixed on the screen:
-	//
-	// the projection matrix is reset to define a scene whose
-	// world coordinate system goes from 0-100 in each axis
-	//
-	// this is called "percent units", and is just a convenience
-	//
-	// the modelview matrix is reset to identity as we don't
-	// want to transform these coordinates
-
-	glDisable( GL_DEPTH_TEST );
-	glMatrixMode( GL_PROJECTION );
-	glLoadIdentity( );
-	gluOrtho2D( 0.f, 100.f,     0.f, 100.f );
-	glMatrixMode( GL_MODELVIEW );
-	glLoadIdentity( );
-	glColor3f( 1.f, 1.f, 1.f );
-	//DoRasterString( 5.f, 5.f, 0.f, (char *)"Text That Doesn't" );
 
 	// swap the double-buffered framebuffers:
 
@@ -866,42 +811,24 @@ InitLists( )
 		glEnd();
 	glEndList();
 
-	// Draw the arrow
+	// Draw the arrows
+	float cf2 = CELLSIZE / 2.;
 	ArrowList = glGenLists(1);
 	glNewList(ArrowList, GL_COMPILE);
-		glBegin(GL_LINE_STRIP);
-		// Left side of arrow
-		glVertex3f(-CELLSIZE / 2., 0., 0.);
-		// R side of arrow
-		glVertex3f(CELLSIZE / 2., 0., 0.);
-		// Bottom point of arrow
-		glVertex3f((CELLSIZE / 2.) - ARROWFRAC, 0., (CELLSIZE / 2.) + ARROWFRAC);
-		// Back to the right side
-		glVertex3f(CELLSIZE / 2., 0., 0.);
-		// Aaaaand up to the top
-		glVertex3f((CELLSIZE / 2.) - ARROWFRAC, 0., (CELLSIZE / 2.) - ARROWFRAC);
-
-	// float size2 = (float)SIZE / 2.;
-	// for (int row = 0; row < SIZE; row++) {
-	// 	for (int col = 0; col < SIZE; col++) {
-	// 		VectorArrows[row * SIZE + col] = glGenLists(1);
-	// 		glNewList(VectorArrows[row * SIZE + col], GL_COMPILE);
-	// 			glBegin(GL_LINE_STRIP);
-	// 			glColor3f(0., 0., 1.);
-	// 			// Left point on arrow
-	// 			glVertex3f(CELLSIZE * ((float)col + 0.1 - size2), 0., CELLSIZE * ((float)row + 0.5 - size2));
-	// 			// Right point on arrow
-	// 			glVertex3f(CELLSIZE * ((float)col + 0.9 - size2), 0., CELLSIZE * ((float)row + 0.5 - size2));
-	// 			// Bottom lip of arrow
-	// 			glVertex3f(CELLSIZE * ((float)col + 0.9 - size2) - ARROWFRAC, 0., CELLSIZE * ((float)row + 0.5 - size2) + ARROWFRAC);
-	// 			// Back up to the right point of arrow
-	// 			glVertex3f(CELLSIZE * ((float)col + 0.9 - size2), 0., CELLSIZE * ((float)row + 0.5 - size2));
-	// 			// Top lip of arrow
-	// 			glVertex3f(CELLSIZE * ((float)col + 0.9 - size2) - ARROWFRAC, 0., CELLSIZE * ((float)row + 0.5 - size2) - ARROWFRAC);
-	// 			glEnd();
-	// 		glEndList();
-	// 	}
-	// }
+	glBegin(GL_LINE_STRIP);
+	glColor3f(0., 0., 1.);
+	// Left side of arrow
+	glVertex3f(-cf2 + ARROWOFF, 0., 0.);
+	// R side of arrow
+	glVertex3f(cf2 - ARROWOFF, 0., 0.);
+	// Bottom point of arrow
+	glVertex3f(cf2 - (ARROWOFF + ARROWFRAC), 0., ARROWFRAC);
+	// Back to the right side
+	glVertex3f(cf2 - ARROWOFF, 0., 0.);
+	// Aaaaand up to the top
+	glVertex3f(cf2 - (ARROWFRAC + ARROWOFF), 0., -ARROWFRAC);
+	glEnd();
+	glEndList();
 
 	// Draw a backboard for the grid
 	BackgroundList = glGenLists(1);
