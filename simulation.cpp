@@ -6,9 +6,12 @@
 // Uncomment if doing any conversions or calculations
 //#include "fluid_formulae.h"
 
-// Size of the grid
 #ifndef SIZE
 #define SIZE 16
+#endif
+
+#ifndef CELLSIZE
+#define CELLSIZE SIZE / SIZE
 #endif
 
 #ifndef DEBUG
@@ -29,8 +32,10 @@ struct Point {
     float temperature;  // Temperature
     float vx;           // X-velocity
     float vy;           // Y-Velocity
-    float pressure;     // Temporary pressure, should be 0 after projection
+    float oldPressure;  // Previous pressure for Poisson
+    float pressure;     // Temporary pressure, should be ~0 after projection
     float density;      // Density
+    float sourceTerm;   // Divergence at the given point
 };
 
 struct Point* grid;
@@ -44,7 +49,8 @@ float cubicInterpolate(float p0, float p1, float p2, float p3, float dt);
 float getSafeVx(int x, int y);
 float getSafeVy(int x, int y);
 void initGrid();
-void solveDivergence(int x, int y);
+float solveDivergence(float p0, float p1, float p2, float p3, float sourceTerm);
+float getSafePressure(float* pressureGrid, int x, int y);
 
 void initGrid() {
     // Initialize 2D grid with 0 values for all except density
@@ -58,6 +64,11 @@ void initGrid() {
                 grid[SIZE * row + col].density     = 1.;
         }
     }
+}
+
+float solveDivergence(float p0, float p1, float p2, float p3, float sourceTerm) {
+    // Solve Poisson for divergence at each point 
+    return 0.25 * (p0 + p1 + p2 + p3 - sourceTerm);
 }
 
 float cubicInterpolate(float p0, float p1, float p2, float p3, float dt) {
@@ -197,9 +208,59 @@ void calculateAdvection(float timestep) {
         }
     }
 
+    // Solve for divergence (ensure no areas in the fluid are compressed)
+    // All points should have initial pressures = 0
+    // Loop k times (figure out what an acceptable divergence looks like and modify later)
+    // Initialize pressures to 0 in preparation for Poisson-ification
+    float *tempPressures = (float *)calloc(SIZE * SIZE, sizeof(float));
+    float *tempOldPressures = (float *)calloc(SIZE * SIZE, sizeof(float));
+
+    // Calculate sourceTerm ((x-comp + y-comp) * material derivative * h^2) for each point
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            tempGrid[SIZE * i + j].sourceTerm = (getSafeVx(i + 1, j) - getSafeVx(i - 1, j)) / (2. * (float)CELLSIZE);
+            tempGrid[SIZE * i + j].sourceTerm += (getSafeVy(i, j + 1) - getSafeVy(i, j - 1)) / (2. * (float)CELLSIZE);
+            tempGrid[SIZE * i + j].sourceTerm *= (tempGrid[SIZE * i + j].density / timestep);
+            tempGrid[SIZE * i + j].sourceTerm *= ((float)(CELLSIZE * CELLSIZE));
+        }
+    }
+    // Jacobi
+    for (int k = 0; k < JACOBIS; k++) {
+        // Move over old pressures
+        memcpy(tempOldPressures, tempPressures, SIZE * SIZE * sizeof(float));
+        for (int i = 0; i < SIZE; i++) {
+            for (int j = 0; j < SIZE; j++) {
+                tempPressures[SIZE * i + j] = solveDivergence(
+                    getSafePressure(tempOldPressures, i + 1, j),
+                    getSafePressure(tempOldPressures, i - 1, j),
+                    getSafePressure(tempOldPressures, i, j + 1),
+                    getSafePressure(tempOldPressures, i, j - 1),
+                    tempGrid[SIZE * i + j].sourceTerm
+                );
+            }
+        }
+    }
+
+    // Now correct x- and y-velocities to account for pressure buildup (or lack thereof)
+    // vx = (temp vx) - ((dt / rho) * (Pright - Pleft) / 2 * CELLSIZE)
+    // vy = (temp vy) - ((dt / rho) * (Pabove - Pbelow) / 2 * CELLSIZE)
+
+    for (int x = 0; x < SIZE; x++) {
+        for (int y = 0; y < SIZE; y++) {
+            float scale = timestep / grid[SIZE * x + y].density;
+            float h = 2. * (float)CELLSIZE;
+            float xcorrection = scale * ((getSafePressure(tempPressures, x + 1, y) - getSafePressure(tempPressures, x - 1, y)) / h);
+            float ycorrection = scale * ((getSafePressure(tempPressures, x, y - 1) - getSafePressure(tempPressures, x, y + 1)) / h);
+            tempGrid[x * SIZE + y].vx -= xcorrection;
+            tempGrid[x * SIZE + y].vy -= ycorrection;
+        }
+    }
+
     // Project temporary grid onto permanent grid
     memcpy(grid, tempGrid, SIZE * SIZE * sizeof(Point));
     free(tempGrid);
+    free(tempPressures);
+    free(tempOldPressures);
 }
 
 struct Point getAtIndex(int x, int y) {
@@ -229,8 +290,15 @@ float getSafeVy(int x, int y) {
     return (x > 0 && x < (SIZE - 1) && y > 0 && y < (SIZE - 1)) ? getAtIndex(x, y).vy : 0.;
 }
 
+float getSafePressure(float* pressureGrid, int x, int y) {
+    return (x > 0 && x < (SIZE - 1) && y > 0 && y < (SIZE - 1)) ? pressureGrid[SIZE * x + y] : 0.;
+}
+
 int main(int argc, char* argv[]) {
     initGrid();
+    for (int i = 0; i < 100; i++) {
+        calculateAdvection((float)i);
+    }
     free(grid);
     return 0;
 }
