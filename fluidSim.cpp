@@ -1724,7 +1724,7 @@ struct Point getAtIndex(int x, int y) {
 		u = x;
 		v = y;
 	}
-	return grid[SIZE * x + y];
+	return grid[SIZE * u + v];
 }
 
 void setVxAtIndex(int x, int y, float vx) {
