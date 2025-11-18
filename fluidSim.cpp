@@ -1462,7 +1462,6 @@ void calculateAdvection(float timestep) {
 
 
 	for (int x = 0; x < SIZE; x++) {
-		// Need to add boundary checking
 		//fprintf(stdout, "%d,,", x);
 		for (int y = 0; y < SIZE; y++) {
 			float forwardX, forwardY;
@@ -1624,6 +1623,7 @@ void calculateAdvection(float timestep) {
 		}
 	}
 		// Jacobi
+		// FIX NEEDED: adjust to jacobi until error < 1e-6 rather than a fixed numtimes
 		for (int k = 0; k < JACOBIS; k++) {
 			// Move over old pressures
 			memcpy(tempOldPressures, tempPressures, SIZE * SIZE * sizeof(float));
