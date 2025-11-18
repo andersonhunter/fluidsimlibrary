@@ -49,7 +49,7 @@
 // Number of Jacobi iterations to perform
 // More iterations = more resolution (but more computation time ):
 #ifndef JACOBIS
-#define JACOBIS 30
+#define JACOBIS 1e-6
 #endif
 
 #include "glut.h"
@@ -1623,12 +1623,13 @@ void calculateAdvection(float timestep) {
 		}
 	}
 		// Jacobi
-		// FIX NEEDED: adjust to jacobi until error < 1e-6 rather than a fixed numtimes
-		for (int k = 0; k < JACOBIS; k++) {
+		double maxError = INFINITY;
+		while (maxError > JACOBIS) {
 			// Move over old pressures
+			maxError = 0.;
 			memcpy(tempOldPressures, tempPressures, SIZE * SIZE * sizeof(float));
-			for (int i = 0; i < SIZE; i++) {
-				for (int j = 0; j < SIZE; j++) {
+			for (int i = 1; i < SIZE - 1; i++) {
+				for (int j = 1; j < SIZE - 1; j++) {
 					tempPressures[SIZE * i + j] = solveDivergence(
 						getSafePressure(tempOldPressures, i + 1, j),
 						getSafePressure(tempOldPressures, i - 1, j),
@@ -1636,7 +1637,16 @@ void calculateAdvection(float timestep) {
 						getSafePressure(tempOldPressures, i, j - 1),
 						tempGrid[SIZE * i + j].sourceTerm
 					);
+					double currentError = fabs(tempOldPressures[i * SIZE + j] - tempPressures[i * SIZE + j]);
+					if (currentError > maxError) {
+						maxError = currentError;
+					}
 				}
+			}
+			// Update ghost cells
+			// COME BACK TO THIS
+			for (int i = 0; i < SIZE; i++) {
+				tempPressures[i * SIZE] = tempPressures
 			}
 		}
 
@@ -1644,17 +1654,14 @@ void calculateAdvection(float timestep) {
 		// vx = (temp vx) - ((dt / rho) * (Pright - Pleft) / 2 * CELLSIZE)
 		// vy = (temp vy) - ((dt / rho) * (Pabove - Pbelow) / 2 * CELLSIZE)
 
-		for (int x = 0; x < SIZE; x++) {
-			for (int y = 0; y < SIZE; y++) {
+		for (int x = 1; x < SIZE - 1; x++) {
+			for (int y = 1; y < SIZE - 1; y++) {
 				float scale = timestep / grid[SIZE * x + y].density;
 				float h = (float)CELLSIZE;
 				float xcorrection = scale * ((getSafePressure(tempPressures, x + 1, y) - getSafePressure(tempPressures, x - 1, y)) / (2. * h));
 				float ycorrection = scale * ((getSafePressure(tempPressures, x, y + 1) - getSafePressure(tempPressures, x, y - 1)) / (2. * h));
-				// Don't correct boundary cells
-				if (x > 0 && x < SIZE - 1 && y > 0 && y < SIZE - 1) {
-					tempGrid[x * SIZE + y].vx -= xcorrection;
-					tempGrid[x * SIZE + y].vy -= ycorrection;
-				}
+				tempGrid[x * SIZE + y].vx -= xcorrection;
+				tempGrid[x * SIZE + y].vy -= ycorrection;
 			}
 		}
 
@@ -1737,7 +1744,63 @@ void setVyAtIndex(int x, int y, float vy) {
 }
 
 float getSafePressure(float* pressureGrid, int x, int y) {
-	return (x > 0 && x < (SIZE - 1) && y > 0 && y < (SIZE - 1)) ? pressureGrid[SIZE * x + y] : 0.;
+	// Retrieve a point at the given index from the grid
+	// Grid[x][y] = grid[SIZE * x + y]
+	// If pulling from outside the grid, pull a ghost cell
+	int u = x;
+	int v = y;
+	// If top
+	if (x <= 0) {
+		// If Top Left Corner
+		if (y <= 0) {
+			u = 0;
+			v = 0;
+		}
+		// If Top Right Corner
+		else if (y >= SIZE - 1) {
+			u = 0;
+			v = SIZE - 1;
+		}
+		// Somewhere else on top row
+		else {
+			u = 0;
+			v = y;
+		}
+	}
+	// If bottom row
+	else if (x >= SIZE - 1) {
+		// If Bottom Left Corner
+		if (y <= 0) {
+			u = SIZE - 1;
+			v = 0;
+		}
+		// If Bottom Right Corner
+		if (y >= SIZE - 1) {
+			u = SIZE - 1;
+			v = SIZE - 1;
+		}
+		// Somewhere else in bottom row
+		else {
+			u = SIZE - 1;
+			v = y;
+		}
+	}
+	// Left column
+	else if (y <= 0) {
+		u = x;
+		v = 0;
+	}
+	// Right column
+	else if (y >= SIZE - 1) {
+		u = x;
+		v = SIZE - 1;
+	}
+	// Valid index
+	else {
+		u = x;
+		v = y;
+	}
+	return pressureGrid[SIZE * u + v];
 }
 
 void InitGrid() {
