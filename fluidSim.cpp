@@ -283,8 +283,6 @@ struct Point getAtIndex(int x, int y);
 void setVxAtIndex(int x, int y, float vx);
 void setVyAtIndex(int x, int y, float vy);
 float cubicInterpolate(float p0, float p1, float p2, float p3, float dt);
-float getSafeVx(int x, int y, float vx);
-float getSafeVy(int x, int y, float vy);
 void InitGrid();
 float solveDivergence(float p0, float p1, float p2, float p3, float sourceTerm);
 float getSafePressure(float* pressureGrid, int x, int y);
@@ -1481,7 +1479,7 @@ void calculateAdvection(float timestep) {
 			float dy = yNext - j;
 			// Interpolate x and y velocities at the new point
 			// vx, vy = CI(CI(p0..p3, dx), dy)
-			// If point is outside the grid, use v = -(v next to boundary) for no-slip boundary conditions
+			// If point is outside the grid, use ghost cell
 			// Add more quantities (temperature, density, etc) here
 			// Maybe turn forward into a forwardStruct at some point?
 
@@ -1491,84 +1489,17 @@ void calculateAdvection(float timestep) {
 			float vx = getAtIndex(x, y).vx;
 			float vy = getAtIndex(x, y).vy;
 			for (int n = -1; n <= 2; n++) {
-				// Determine if each i, j pair is within 1, SIZE - 2, if not clamp to nearest valid index
-				// REWORK to do boundaries (ghost cells) instead
+				// Pull 4x4 neighbors, use ghost cells if OOBs
 				int u = i + n;
 				int v0 = j - 1;
 				int v1 = j;
 				int v2 = j + 1;
 				int v3 = j + 2;
-				int uo = 0;
-				int v0o = 0;
-				int v1o = 0;
-				int v2o = 0;
-				int v3o = 0;
-
-				if (u <= 0) {
-					u = 1;
-					uo = 1;
-				}
-				if (u >= SIZE - 1) {
-					u = SIZE - 2;
-					uo = 1;
-				}
-				if (v0 <= 0) {
-					v0 = 1;
-					v0o = 1;
-				}
-				if (v0 >= SIZE - 1) {
-					v0 = SIZE - 2;
-					v0o = 1;
-				}
-				if (v1 <= 0) {
-					v1 = 1;
-					v1o = 1;
-				}
-				if (v1 >= SIZE - 1) {
-					v1 = SIZE - 2;
-					v1o = 1;
-				}
-				if (v2 <= 0) {
-					v2 = 1;
-					v2o = 1;
-				}
-				if (v2 >= SIZE - 1) {
-					v2 = SIZE - 2;
-					v2o = 1;
-				}
-				if (v3 <= 0) {
-					v3 = 1;
-					v3o = 1;
-				}
-				if (v3 >= SIZE - 1) {
-					v3 = SIZE - 2;
-					v3o = 1;
-				}
-
+				
 				struct Point p0 = getAtIndex(u, v0);
 				struct Point p1 = getAtIndex(u, v1);
 				struct Point p2 = getAtIndex(u, v2);
 				struct Point p3 = getAtIndex(u, v3);
-
-				// Determine if any points were OOB and sign flip if so
-				if (uo) {
-					p0.vx *= -1.;
-					p1.vx *= -1.;
-					p2.vx *= -1.;
-					p3.vx *= -1.;
-				}
-				if (v0o) {
-					p0.vy *= -1.;
-				}
-				if (v1o) {
-					p1.vy *= -1.;
-				}
-				if (v2o) {
-					p2.vy *= -1.;
-				}
-				if (v3o) {
-					p3.vy *= -1.;
-				}
 
 				tempX[n + 1] = cubicInterpolate(
 					p0.vx,
@@ -1592,7 +1523,7 @@ void calculateAdvection(float timestep) {
 
 			// Back trace the point and interpolate x and y velocities
 			// vx, vy = CI(CI(p0..p3, dx), dy)
-			// If point is outside the grid, use v = 0 for no-slip boundary conditions
+			// If point is outside the grid, use ghost cell
 			// Add more quantities (temperature, density, etc) here
 			// Maybe turn backward into a backStruct at some point?
 
@@ -1609,84 +1540,17 @@ void calculateAdvection(float timestep) {
 			float tempYPrev[4];
 
 			for (int n = -1; n <= 2; n++) {
-				// Determine if each i, j pair is within 1, SIZE - 2, if not clamp to nearest valid index
-				// REWORK to do boundaries (ghost cells) instead
-				int u = i + n;
-				int v0 = j - 1;
-				int v1 = j;
-				int v2 = j + 1;
-				int v3 = j + 2;
-				int uo = 0;
-				int v0o = 0;
-				int v1o = 0;
-				int v2o = 0;
-				int v3o = 0;
-
-				if (u <= 0) {
-					u = 1;
-					uo = 1;
-				}
-				if (u >= SIZE - 1) {
-					u = SIZE - 2;
-					uo = 1;
-				}
-				if (v0 <= 0) {
-					v0 = 1;
-					v0o = 1;
-				}
-				if (v0 >= SIZE - 1) {
-					v0 = SIZE - 2;
-					v0o = 1;
-				}
-				if (v1 <= 0) {
-					v1 = 1;
-					v1o = 1;
-				}
-				if (v1 >= SIZE - 1) {
-					v1 = SIZE - 2;
-					v1o = 1;
-				}
-				if (v2 <= 0) {
-					v2 = 1;
-					v2o = 1;
-				}
-				if (v2 >= SIZE - 1) {
-					v2 = SIZE - 2;
-					v2o = 1;
-				}
-				if (v3 <= 0) {
-					v3 = 1;
-					v3o = 1;
-				}
-				if (v3 >= SIZE - 1) {
-					v3 = SIZE - 2;
-					v3o = 1;
-				}
-
-				struct Point p0 = getAtIndex(u, v0);
-				struct Point p1 = getAtIndex(u, v1);
-				struct Point p2 = getAtIndex(u, v2);
-				struct Point p3 = getAtIndex(u, v3);
-
-				// Determine if any points were OOB and sign flip if so
-				if (uo) {
-					p0.vx *= -1.;
-					p1.vx *= -1.;
-					p2.vx *= -1.;
-					p3.vx *= -1.;
-				}
-				if (v0o) {
-					p0.vy *= -1.;
-				}
-				if (v1o) {
-					p1.vy *= -1.;
-				}
-				if (v2o) {
-					p2.vy *= -1.;
-				}
-				if (v3o) {
-					p3.vy *= -1.;
-				}
+				// Pull 4x4 neighbors, use ghost cells if OOBs
+				u = i + n;
+				v0 = j - 1;
+				v1 = j;
+				v2 = j + 1;
+				v3 = j + 2;
+				
+				p0 = getAtIndex(u, v0);
+				p1 = getAtIndex(u, v1);
+				p2 = getAtIndex(u, v2);
+				p3 = getAtIndex(u, v3);
 
 				tempXPrev[n + 1] = cubicInterpolate(
 					p0.vx,
@@ -1722,12 +1586,7 @@ void calculateAdvection(float timestep) {
 
 			// Copy new value into temporary struct
 			// Don't write into the boundary
-			if (x == 0 || x == SIZE - 1 || y == 0 || y == SIZE - 1) {
-				// Enforce no-slip
-				tempGrid[SIZE * x + y].vx = 0.f;
-				tempGrid[SIZE * x + y].vy = 0.f;
-			}
-			else {
+			if (x > 0 && x < SIZE - 1 && y > 0 && y < SIZE - 1) {
 				tempGrid[SIZE * x + y].vx = correctedX;
 				tempGrid[SIZE * x + y].vy = correctedY;
 			}
@@ -1796,12 +1655,6 @@ void calculateAdvection(float timestep) {
 					tempGrid[x * SIZE + y].vx -= xcorrection;
 					tempGrid[x * SIZE + y].vy -= ycorrection;
 				}
-				// Enforce no-slip
-				else {
-					tempGrid[x * SIZE + y].vx = 0.f;
-					tempGrid[x * SIZE + y].vy = 0.f;
-				}
-				
 			}
 		}
 
@@ -1810,12 +1663,67 @@ void calculateAdvection(float timestep) {
 		free(tempGrid);
 		free(tempPressures);
 		free(tempOldPressures);
+		// Correct boundary cells
 		InitBoundaries();
 }
 
 struct Point getAtIndex(int x, int y) {
 	// Retrieve a point at the given index from the grid
 	// Grid[x][y] = grid[SIZE * x + y]
+	// If pulling from outside the grid, pull a ghost cell
+	int u = x;
+	int v = y;
+	// If top
+	if (x <= 0) {
+		// If Top Left Corner
+		if (y <= 0) {
+			u = 0;
+			v = 0;
+		}
+		// If Top Right Corner
+		else if (y >= SIZE - 1) {
+			u = 0;
+			v = SIZE - 1;
+		}
+		// Somewhere else on top row
+		else {
+			u = 0;
+			v = y;
+		}
+	}
+	// If bottom row
+	else if (x >= SIZE - 1) {
+		// If Bottom Left Corner
+		if (y <= 0) {
+			u = SIZE - 1;
+			v = 0;
+		}
+		// If Bottom Right Corner
+		if (y >= SIZE - 1) {
+			u = SIZE - 1;
+			v = SIZE - 1;
+		}
+		// Somewhere else in bottom row
+		else {
+			u = SIZE - 1;
+			v = y;
+		}
+	}
+	// Left column
+	else if (y <= 0) {
+		u = x;
+		v = 0;
+	}
+	// Right column
+	else if (y >= SIZE - 1) {
+		u = x;
+		v = SIZE - 1;
+	}
+	// Valid index
+	else {
+		u = x;
+		v = y;
+	}
 	return grid[SIZE * x + y];
 }
 
@@ -1826,18 +1734,6 @@ void setVxAtIndex(int x, int y, float vx) {
 
 void setVyAtIndex(int x, int y, float vy) {
 	grid[SIZE * x + y].vy = vy;
-}
-
-float getSafeVx(int x, int y, float vx) {
-	// Helper function to safely get the x-velocity at a given index
-	// Returns -vx if the index is OOB or within boundary layer
-	return (x > 0 && x < (SIZE - 1) && y > 0 && y < (SIZE - 1)) ? getAtIndex(x, y).vx : vx * -1.;
-}
-
-float getSafeVy(int x, int y, float vy) {
-	// Helper function to safely get the y-velocity at a given index
-	// Returns 0 if the index is OOB or within boundary layer
-	return (x > 0 && x < (SIZE - 1) && y > 0 && y < (SIZE - 1)) ? getAtIndex(x, y).vy : vy * -1.;
 }
 
 float getSafePressure(float* pressureGrid, int x, int y) {
