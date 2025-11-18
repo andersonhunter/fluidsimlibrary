@@ -1,0 +1,3 @@
+1. Add in dynamic Jacobi rather than fixed iterative
+2. Create particle-based view to show movement of fluid
+3. Create shader-based view to show actual fluid
