@@ -1644,7 +1644,16 @@ void calculateAdvection(float timestep) {
 				}
 			}
 			// Update ghost cells
-			for (int i = 0; i <= SIZE - 1; i++) {
+			// Update corners
+			// Top-left
+			tempPressures[0] = tempPressures[SIZE + 1];
+			// Top-right
+			tempPressures[SIZE - 1] = tempPressures[SIZE + (SIZE-2)];
+			// Bottom-left
+			tempPressures[(SIZE - 1) * SIZE] = tempPressures[(SIZE - 2) * SIZE + 1];
+			// Bottom-right
+			tempPressures[(SIZE - 1) * SIZE + (SIZE - 1)] = tempPressures[(SIZE - 2) * SIZE + (SIZE -2 )];
+			for (int i = 1; i < SIZE - 1; i++) {
 				// Do the top and bottom rows
 				tempPressures[i] = tempPressures[SIZE + i];
 				tempPressures[SIZE * (SIZE - 1) + i] = tempPressures[SIZE * (SIZE - 2) + i];
@@ -1779,7 +1788,7 @@ float getSafePressure(float* pressureGrid, int x, int y) {
 			v = 0;
 		}
 		// If Bottom Right Corner
-		if (y >= SIZE - 1) {
+		else if (y >= SIZE - 1) {
 			u = SIZE - 1;
 			v = SIZE - 1;
 		}
