@@ -439,9 +439,8 @@ Animate( )
 	// for example, if you wanted to spin an object in Display( ), you might call: glRotatef( 360.f*Time,   0., 1., 0. );
 
 	// force a call to Display( ) next time it is convenient:
-	double dt;
-	// Check CFL compliance
-	float maxVelocity = 0.f;
+	// Compute max velocity
+	float maxVelocity = 0.;
 	for (int i = 0; i < SIZE * SIZE; i++) {
 		float vx = grid[i].vx;
 		float vy = grid[i].vy;
@@ -451,23 +450,30 @@ Animate( )
 		}
 	}
 
-	if (maxVelocity > 0.0f) {
-		float Cmax = 0.5;
-		float maxAllowed = Cmax * (float)CELLSIZE / maxVelocity;  // Use 0.5 as a safety factor
-		float kinematicViscosity = 0.001; // Adjust later!!!!!
-		float viscosityTerm = 0.25 * (float)CELLSIZE * (float)CELLSIZE / kinematicViscosity;
+	// CFL compliance
+	float dt;
+	const float Cmax = 0.5;
+	const float kinematicViscosity = 0.001;
+
+	if (maxVelocity > 0.f) {
+		// CFL limit for advection
+		float dtCFL = Cmax * ((float)CELLSIZE / maxVelocity);
+
+		// Set explicit diffusion stability limit
+		float dtVisc = 0.25 * ((float)CELLSIZE * (float)CELLSIZE) / kinematicViscosity;
 		
-		// Use the minimum time step
-		dt = fmin(maxAllowed, viscosityTerm);
-		maxMagnitude = maxVelocity;
-		fprintf(stderr, "CFL limited time = %.5f, maxVelocity = %.5f\n", dt, maxVelocity);
+		// Choose the smaller timestep
+		dt = fmin(dtCFL, dtVisc);
 	}
 	else {
-		// If velocity is 0 then avoid div by 0
+		// Choose reasonable timestep if grid is still
 		dt = 0.01;
-		maxMagnitude = 0.0001;
 	}
-	dt = 0.0001;
+
+	maxMagnitude = (maxVelocity > 0.f) ? maxVelocity : 0.0001f;
+
+	fprintf(stderr, "dt = %.6f, maxVelocity = %.5f\n", dt, maxVelocity);
+
 	calculateAdvection(dt);
 	glutSetWindow( MainWindow );
 	glutPostRedisplay( );
@@ -1460,10 +1466,10 @@ void calculateAdvection(float timestep) {
 	// Create struct of temporary values
 	struct Point* tempGrid = (struct Point*)malloc((SIZE * SIZE) * sizeof(Point));
 
-
-	for (int x = 0; x < SIZE; x++) {
+	// Only advect interior cells
+	for (int x = 1; x < SIZE - 1; x++) {
 		//fprintf(stdout, "%d,,", x);
-		for (int y = 0; y < SIZE; y++) {
+		for (int y = 1; y < SIZE - 1; y++) {
 			float forwardX, forwardY;
 			float backwardX, backwardY;
 			// Calculate the forward estimate
@@ -1494,7 +1500,7 @@ void calculateAdvection(float timestep) {
 				int v1 = j;
 				int v2 = j + 1;
 				int v3 = j + 2;
-				
+
 				struct Point p0 = getAtIndex(u, v0);
 				struct Point p1 = getAtIndex(u, v1);
 				struct Point p2 = getAtIndex(u, v2);
@@ -1622,7 +1628,7 @@ void calculateAdvection(float timestep) {
 		}
 	}
 		// Jacobi
-		double maxError = INFINITY;
+		float maxError = INFINITY;
 		while (maxError > JACOBIS) {
 			// Move over old pressures
 			maxError = 0.;
@@ -1636,29 +1642,21 @@ void calculateAdvection(float timestep) {
 						getSafePressure(tempOldPressures, i, j - 1),
 						tempGrid[SIZE * i + j].sourceTerm
 					);
-					double currentError = fabs(tempOldPressures[i * SIZE + j] - tempPressures[i * SIZE + j]);
+					float currentError = fabs(tempOldPressures[i * SIZE + j] - tempPressures[i * SIZE + j]);
 					if (currentError > maxError) {
 						maxError = currentError;
 					}
+					fprintf(stderr, "maxError = %f\n", maxError);
 				}
 			}
 			// Update ghost cells
-			// Update corners
-			// Top-left
-			tempPressures[0] = tempPressures[SIZE + 1];
-			// Top-right
-			tempPressures[SIZE - 1] = tempPressures[SIZE + (SIZE-2)];
-			// Bottom-left
-			tempPressures[(SIZE - 1) * SIZE] = tempPressures[(SIZE - 2) * SIZE + 1];
-			// Bottom-right
-			tempPressures[(SIZE - 1) * SIZE + (SIZE - 1)] = tempPressures[(SIZE - 2) * SIZE + (SIZE -2 )];
-			for (int i = 1; i < SIZE - 1; i++) {
-				// Do the top and bottom rows
-				tempPressures[i] = tempPressures[SIZE + i];
-				tempPressures[SIZE * (SIZE - 1) + i] = tempPressures[SIZE * (SIZE - 2) + i];
-				// Do the left and right sides
-				tempPressures[SIZE * i] = tempPressures[SIZE * i + 1];
-				tempPressures[SIZE * i + (SIZE - 1)] = tempPressures[SIZE * i + (SIZE - 2)];
+			for (int i = 0; i < SIZE; i++) {
+				// top/bottom
+				tempPressures[0 * SIZE + i] = tempPressures[1 * SIZE + i];           // top row
+				tempPressures[(SIZE-1) * SIZE + i] = tempPressures[(SIZE-2) * SIZE + i]; // bottom row
+				// left/right
+				tempPressures[i * SIZE + 0] = tempPressures[i * SIZE + 1];           // left col
+				tempPressures[i * SIZE + (SIZE-1)] = tempPressures[i * SIZE + (SIZE-2)]; // right col
 			}
 		}
 
