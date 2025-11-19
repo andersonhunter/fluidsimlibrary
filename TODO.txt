@@ -1,3 +1,12 @@
-1. Add in dynamic Jacobi rather than fixed iterative
+Potential fixes:
+    Add a MacCormack limiter:
+        float corrected = predictor * 0.5f * (predictor - corrector);
+        float minv = min(u_left, u_right, u_up, u_down, u_prev);
+        float maxv = max(u_left, u_right, u_up, u_down, u_prev);
+        u[i] = clamp(corrected, minv, maxv);
+    Lower Poisson tol to ~1e-3
+    Set maxIters to 40-80
+
+
 2. Create particle-based view to show movement of fluid
 3. Create shader-based view to show actual fluid
