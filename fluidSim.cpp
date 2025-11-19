@@ -49,7 +49,7 @@
 // Number of Jacobi iterations to perform
 // More iterations = more resolution (but more computation time ):
 #ifndef JACOBIS
-#define JACOBIS 1e-6
+#define JACOBIS 1e-3
 #endif
 
 #include "glut.h"
@@ -241,7 +241,7 @@ float	Time;					// used for animation, this has a value between 0. and 1.
 int		Xmouse, Ymouse;			// mouse values
 float	Xrot, Yrot;				// rotation angles in degrees
 struct Point* grid;
-float	maxMagnitude = 0.000001;
+float	maxMagnitude = 1.f;
 
 // function prototypes:
 
@@ -470,7 +470,7 @@ Animate( )
 		dt = 0.01;
 	}
 
-	maxMagnitude = (maxVelocity > 0.f) ? maxVelocity : 0.0001f;
+	maxMagnitude = (maxVelocity > 0.f) ? maxVelocity : 1.f;
 
 	fprintf(stderr, "dt = %.6f, maxVelocity = %.5f\n", dt, maxVelocity);
 
