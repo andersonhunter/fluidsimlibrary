@@ -46,7 +46,7 @@
 #define CELLSIZE (1.0 / (float)SIZE)
 #endif
 
-// Number of Jacobi iterations to perform
+// Jacobi Tolerance
 // More iterations = more resolution (but more computation time ):
 #ifndef JACOBIS
 #define JACOBIS 1e-3
