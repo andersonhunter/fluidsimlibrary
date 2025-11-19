@@ -1652,10 +1652,10 @@ void calculateAdvection(float timestep) {
 			// Update ghost cells
 			for (int i = 0; i < SIZE; i++) {
 				// top/bottom
-				tempPressures[0 * SIZE + i] = tempPressures[1 * SIZE + i];           // top row
+				tempPressures[i] = tempPressures[SIZE + i];           // top row
 				tempPressures[(SIZE-1) * SIZE + i] = tempPressures[(SIZE-2) * SIZE + i]; // bottom row
 				// left/right
-				tempPressures[i * SIZE + 0] = tempPressures[i * SIZE + 1];           // left col
+				tempPressures[i * SIZE] = tempPressures[i * SIZE + 1];           // left col
 				tempPressures[i * SIZE + (SIZE-1)] = tempPressures[i * SIZE + (SIZE-2)]; // right col
 			}
 		}
@@ -1783,8 +1783,8 @@ void InitBoundaries() {
 	// Set the top left and top right corners to 0
 	grid[0].vx = 0.;
 	grid[0].vy = 0.;
-	grid[0 * SIZE + SIZE - 1].vx = 0.;
-	grid[0 * SIZE + SIZE - 1].vy = 0.;
+	grid[SIZE - 1].vx = 0.;
+	grid[SIZE - 1].vy = 0.;
 	for (int y = 1; y < SIZE - 1; y++) {
 		grid[y].vx = getAtIndex(1, y).vx;
 		grid[y].vy = -getAtIndex(1, y).vy;
