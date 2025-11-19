@@ -1540,16 +1540,16 @@ void calculateAdvection(float timestep) {
 
 			for (int n = -1; n <= 2; n++) {
 				// Pull 4x4 neighbors, use ghost cells if OOBs
-				u = i + n;
-				v0 = j - 1;
-				v1 = j;
-				v2 = j + 1;
-				v3 = j + 2;
+				int u = i + n;
+				int v0 = j - 1;
+				int v1 = j;
+				int v2 = j + 1;
+				int v3 = j + 2;
 				
-				p0 = getAtIndex(u, v0);
-				p1 = getAtIndex(u, v1);
-				p2 = getAtIndex(u, v2);
-				p3 = getAtIndex(u, v3);
+				struct Point p0 = getAtIndex(u, v0);
+				struct Point p1 = getAtIndex(u, v1);
+				struct Point p2 = getAtIndex(u, v2);
+				struct Point p3 = getAtIndex(u, v3);
 
 				tempXPrev[n + 1] = cubicInterpolate(
 					p0.vx,
