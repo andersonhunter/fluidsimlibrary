@@ -1691,60 +1691,11 @@ struct Point getAtIndex(int x, int y) {
 	// Retrieve a point at the given index from the grid
 	// Grid[x][y] = grid[SIZE * x + y]
 	// If pulling from outside the grid, pull a ghost cell
-	int u = x;
-	int v = y;
-	// If top
-	if (x <= 0) {
-		// If Top Left Corner
-		if (y <= 0) {
-			u = 0;
-			v = 0;
-		}
-		// If Top Right Corner
-		else if (y >= SIZE - 1) {
-			u = 0;
-			v = SIZE - 1;
-		}
-		// Somewhere else on top row
-		else {
-			u = 0;
-			v = y;
-		}
-	}
-	// If bottom row
-	else if (x >= SIZE - 1) {
-		// If Bottom Left Corner
-		if (y <= 0) {
-			u = SIZE - 1;
-			v = 0;
-		}
-		// If Bottom Right Corner
-		if (y >= SIZE - 1) {
-			u = SIZE - 1;
-			v = SIZE - 1;
-		}
-		// Somewhere else in bottom row
-		else {
-			u = SIZE - 1;
-			v = y;
-		}
-	}
-	// Left column
-	else if (y <= 0) {
-		u = x;
-		v = 0;
-	}
-	// Right column
-	else if (y >= SIZE - 1) {
-		u = x;
-		v = SIZE - 1;
-	}
-	// Valid index
-	else {
-		u = x;
-		v = y;
-	}
-	return grid[SIZE * u + v];
+	x = (x < 0) ? 0 : x;
+	x = (x > SIZE - 1) ? SIZE - 1 : x;
+	y = (y < 0) ? 0 : y;
+	y = (y > SIZE - 1) ? SIZE - 1 : y;
+	return grid[SIZE * x + y];
 }
 
 void setVxAtIndex(int x, int y, float vx) {
@@ -1760,60 +1711,11 @@ float getSafePressure(float* pressureGrid, int x, int y) {
 	// Retrieve a point at the given index from the grid
 	// Grid[x][y] = grid[SIZE * x + y]
 	// If pulling from outside the grid, pull a ghost cell
-	int u = x;
-	int v = y;
-	// If top
-	if (x <= 0) {
-		// If Top Left Corner
-		if (y <= 0) {
-			u = 0;
-			v = 0;
-		}
-		// If Top Right Corner
-		else if (y >= SIZE - 1) {
-			u = 0;
-			v = SIZE - 1;
-		}
-		// Somewhere else on top row
-		else {
-			u = 0;
-			v = y;
-		}
-	}
-	// If bottom row
-	else if (x >= SIZE - 1) {
-		// If Bottom Left Corner
-		if (y <= 0) {
-			u = SIZE - 1;
-			v = 0;
-		}
-		// If Bottom Right Corner
-		else if (y >= SIZE - 1) {
-			u = SIZE - 1;
-			v = SIZE - 1;
-		}
-		// Somewhere else in bottom row
-		else {
-			u = SIZE - 1;
-			v = y;
-		}
-	}
-	// Left column
-	else if (y <= 0) {
-		u = x;
-		v = 0;
-	}
-	// Right column
-	else if (y >= SIZE - 1) {
-		u = x;
-		v = SIZE - 1;
-	}
-	// Valid index
-	else {
-		u = x;
-		v = y;
-	}
-	return pressureGrid[SIZE * u + v];
+	x = (x < 0) ? 0 : x;
+	x = (x > SIZE - 1) ? SIZE - 1 : x;
+	y = (y < 0) ? 0 : y;
+	y = (y > SIZE - 1) ? SIZE - 1 : y;
+	return pressureGrid[SIZE * x + y];
 }
 
 void InitGrid() {
