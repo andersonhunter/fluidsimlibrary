@@ -1643,7 +1643,8 @@ void calculateAdvection(float timestep) {
 					}
 				}
 			}
-			// Update ghost cells
+		}
+		// Update ghost cells
 			for (int i = 0; i < SIZE - 1; i++) {
 				// Do the top and bottom rows
 				tempPressures[i] = tempPressures[SIZE + i];
@@ -1652,7 +1653,6 @@ void calculateAdvection(float timestep) {
 				tempPressures[SIZE * i] = tempPressures[SIZE * i + 1];
 				tempPressures[SIZE * i + (SIZE - 1)] = tempPressures[SIZE * i + (SIZE - 2)];
 			}
-		}
 
 		// Now correct x- and y-velocities to account for pressure buildup (or lack thereof)
 		// vx = (temp vx) - ((dt / rho) * (Pright - Pleft) / 2 * CELLSIZE)
