@@ -1612,13 +1612,12 @@ void calculateAdvection(float timestep) {
 	float* tempOldPressures = (float*)calloc(SIZE * SIZE, sizeof(float));
 
 	// Calculate sourceTerm ((x-comp + y-comp) * material derivative * h^2) for each point
-	// Adjust this to a safe lookup not ternary
 	for (int i = 0; i < SIZE; i++) {
 		for (int j = 0; j < SIZE; j++) {
-			float p0 = (i + 1 > 0 && i + 1 < (SIZE - 1) && j > 0 && j < (SIZE - 1)) ? tempGrid[SIZE * (i + 1) + j].vx : 0.;
-			float p1 = (i - 1 > 0 && i - 1 < (SIZE - 1) && j > 0 && j < (SIZE - 1)) ? tempGrid[SIZE * (i - 1) + j].vx : 0.;
-			float p2 = (i > 0 && i < (SIZE - 1) && j + 1 > 0 && j + 1 < (SIZE - 1)) ? tempGrid[SIZE * i + (j + 1)].vy : 0.;
-			float p3 = (i > 0 && i < (SIZE - 1) && j - 1 > 0 && j - 1 < (SIZE - 1)) ? tempGrid[SIZE * i + (j - 1)].vy : 0.;
+			float p0 = getAtIndex(i + 1, j).vx;
+			float p1 = getAtIndex(i - 1, j).vx;
+			float p2 = getAtIndex(i, j + 1).vy;
+			float p3 = getAtIndex(i, j - 1).vy;
 			tempGrid[SIZE * i + j].sourceTerm = (p0 - p1 + p2 - p3) / (2. * (float)CELLSIZE);
 		}
 	}
