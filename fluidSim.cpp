@@ -1644,9 +1644,13 @@ void calculateAdvection(float timestep) {
 				}
 			}
 			// Update ghost cells
-			// COME BACK TO THIS
-			for (int i = 0; i < SIZE; i++) {
-				tempPressures[i * SIZE] = tempPressures
+			for (int i = 0; i < SIZE - 1; i++) {
+				// Do the top and bottom rows
+				tempPressures[i] = tempPressures[SIZE + i];
+				tempPressures[SIZE * (SIZE - 1) + i] = tempPressures[SIZE * (SIZE - 2) + i];
+				// Do the left and right sides
+				tempPressures[SIZE * i] = tempPressures[SIZE * i + 1];
+				tempPressures[SIZE * i + (SIZE - 1)] = tempPressures[SIZE * i + (SIZE - 2)];
 			}
 		}
 
