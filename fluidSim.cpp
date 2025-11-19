@@ -470,7 +470,7 @@ Animate( )
 		dt = 0.01;
 	}
 
-	maxMagnitude = (maxVelocity > 0.f) ? maxVelocity : 0.0001f;
+	maxMagnitude = (maxVelocity >= 0.f) ? maxVelocity : 0.0001f;
 
 	fprintf(stderr, "dt = %.6f, maxVelocity = %.5f\n", dt, maxVelocity);
 
