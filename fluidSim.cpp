@@ -1427,7 +1427,7 @@ Unit( float v[3] )
 
 float solveDivergence(float p0, float p1, float p2, float p3, float sourceTerm) {
 	// Solve Poisson for divergence at each point 
-	return 0.25 * (p0 + p1 + p2 + p3 - sourceTerm);
+	return 0.25 * (p0 + p1 + p2 + p3 - sourceTerm * CELLSIZE * CELLSIZE);
 }
 
 float cubicInterpolate(float p0, float p1, float p2, float p3, float dt) {
