@@ -610,12 +610,14 @@ Display()
 		// Rotate, then transform
 		for (int row = 0; row < SIZE; row++) {
 			for (int col = 0; col < SIZE; col++) {
+				float tlc = -0.5 * SIZE * CELLSIZE;
+				float halfCell = 0.5 * CELLSIZE;
 				glPushMatrix();
-				glTranslatef(CELLSIZE * (0.5 - 0.5 * (float)SIZE + col), 0., CELLSIZE * (0.5 - 0.5 * (float)SIZE + row));
+				glTranslatef(tlc + halfCell + (col * CELLSIZE), 0., tlc + halfCell + (row * CELLSIZE));
 				struct Point nowPoint = getAtIndex(row, col);
 				float vx = nowPoint.vx;
 				float vy = nowPoint.vy;
-				float theta = atan2(vx, vy);
+				float theta = atan2(vy, vx);
 				glRotatef(theta * 180. / M_PI, 0., 1., 0.);
 				// Scale the arrow to [0, 1] based on magnitude
 				float mag = sqrtf((vx * vx) + (vy * vy)) / maxMagnitude;
@@ -961,20 +963,23 @@ InitLists()
 
 	// Draw the arrows
 	float cf2 = CELLSIZE / 2.;
+	float shaft = cf2 * 0.6f;
+	float head = cf2 * 0.4f;
+	float hw = cf2 * 0.2f;
 	ArrowList = glGenLists(1);
 	glNewList(ArrowList, GL_COMPILE);
-	glBegin(GL_LINE_STRIP);
+	glBegin(GL_LINES);
 	glColor3f(0., 0., 1.);
-	// Left side of arrow
-	glVertex3f(-cf2 + ARROWOFF, 0., 0.);
-	// R side of arrow
-	glVertex3f(cf2 - ARROWOFF, 0., 0.);
-	// Bottom point of arrow
-	glVertex3f(cf2 - (ARROWOFF + ARROWFRAC), 0., ARROWFRAC);
-	// Back to the right side
-	glVertex3f(cf2 - ARROWOFF, 0., 0.);
-	// Aaaaand up to the top
-	glVertex3f(cf2 - (ARROWFRAC + ARROWOFF), 0., -ARROWFRAC);
+	// The shaft
+	glVertex3f(-shaft * 0.5, 0., 0.);
+	glVertex3f(shaft * 0.5, 0., 0.);
+	// Head
+	glVertex3f(shaft * 0.5f, 0.f, 0.f);
+	glVertex3f(shaft * 0.5f - head, 0.f, hw);
+
+	glVertex3f(shaft * 0.5f, 0.f, 0.f);
+	glVertex3f(shaft * 0.5f - head, 0.f, -hw);
+
 	glEnd();
 	glEndList();
 
