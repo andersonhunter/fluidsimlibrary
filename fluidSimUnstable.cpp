@@ -473,15 +473,24 @@ Animate()
 
 	// CFL compliance
 	float dt;
+	const float dtMinVel = 1e-5f;
+	const float dtMin = 1e-5f;
+	
 	const float Cmax = 0.5;
 	const float kinematicViscosity = 0.001;
 
-	float dtCFL = Cmax * ((float)CELLSIZE / maxVelocity);
+	float safeVelocity = fmaxf(maxVelocity, dtMinVel);
+	
+	float dtCFL = Cmax * (CELLSIZE / safeVelocity);
 	float dtVisc = 0.25f * ((float)CELLSIZE * (float)CELLSIZE) / kinematicViscosity;
 
 	dt = fmin(fmin(dtCFL, dtVisc), 0.01f);
 
-	maxMagnitude = (maxVelocity > 0.f) ? maxVelocity : 1.f;
+	// Turn on later
+	// Timestep smoothing?
+	// dt = 0.9f * previous_dt + 0.1f * dt;
+	
+	maxMagnitude = safeVelocity;
 
 	fprintf(stderr, "dt = %.6f, maxVelocity = %.5f\n", dt, maxVelocity);
 
@@ -1961,3 +1970,4 @@ float minmod(float a, float b) {
 	}
 	return (fabs(a) < fabs(b)) ? a : b;
 }
+
