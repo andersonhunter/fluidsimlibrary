@@ -1564,7 +1564,8 @@ void calculateAdvection(float timestep) {
 	// Bilinear would be more performant but less accurate, add as an option later
 
 	// Create struct of temporary values
-	struct Point* tempGrid = (struct Point*)malloc((SIZE * SIZE) * sizeof(Point));
+	Point* tempGrid = (Point*)calloc(SIZE * SIZE, sizeof(Point));
+	memcpy(tempGrid, grid, SIZE * SIZE * sizeof(Point));
 	bool useLinear = (frameCount < warmupFrames);
 
 	// Only advect interior cells
@@ -1630,12 +1631,11 @@ void calculateAdvection(float timestep) {
 						p3.vy,
 						dx
 					);
-					// Calculate forward estimates
-					forwardX = cubicInterpolate(tempX[0], tempX[1], tempX[2], tempX[3], dy);
-					forwardY = cubicInterpolate(tempY[0], tempY[1], tempY[2], tempY[3], dy);
 				}
+				// Calculate forward estimates
 			}
-
+			forwardX = cubicInterpolate(tempX[0], tempX[1], tempX[2], tempX[3], dy);
+			forwardY = cubicInterpolate(tempY[0], tempY[1], tempY[2], tempY[3], dy);
 
 
 			// Back trace the point and interpolate x and y velocities
@@ -1692,12 +1692,10 @@ void calculateAdvection(float timestep) {
 						dx
 					);
 				}
-
-				// Calculate backward estimates
-				backwardX = cubicInterpolate(tempXPrev[0], tempXPrev[1], tempXPrev[2], tempXPrev[3], dy);
-				backwardY = cubicInterpolate(tempYPrev[0], tempYPrev[1], tempYPrev[2], tempYPrev[3], dy);
 			}
-
+			// Calculate backward estimates
+			backwardX = cubicInterpolate(tempXPrev[0], tempXPrev[1], tempXPrev[2], tempXPrev[3], dy);
+			backwardY = cubicInterpolate(tempYPrev[0], tempYPrev[1], tempYPrev[2], tempYPrev[3], dy);
 
 
 			// Calculate corrected value
