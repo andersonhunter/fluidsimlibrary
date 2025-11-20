@@ -59,7 +59,7 @@
 #include "glut.h"
 
 #ifndef DEBUG
-#define DEBUG true
+#define DEBUG false
 #endif
 
 struct Point {
@@ -492,7 +492,9 @@ Animate()
 	
 	maxMagnitude = safeVelocity;
 
-	fprintf(stderr, "dt = %.6f, maxVelocity = %.5f\n", dt, maxVelocity);
+	if (DEBUG) {
+		fprintf(stderr, "dt = %.6f, maxVelocity = %.5f\n", dt, maxVelocity);
+	}
 
 	currentTime = dt;
 
@@ -543,7 +545,7 @@ Display()
 	if (NowProjection == ORTHO)
 		glOrtho(-25.f, 25.f, -25.f, 25.f, 0.1f, 1000.f);
 	else
-		gluPerspective(70.f, 1.f, 0.1f, 1000.f);
+		gluPerspective(70.f, 1.f, 1.f, 50.f);
 
 	// place the objects into the scene:
 
@@ -552,7 +554,7 @@ Display()
 
 	// set the eye position, look-at position, and up-vector:
 
-	gluLookAt(0.f, 10.f, 50.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f);
+	gluLookAt(0.f, 12.f, 16.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f);
 
 	// rotate the scene:
 
@@ -563,7 +565,7 @@ Display()
 
 	if (Scale < MINSCALE)
 		Scale = MINSCALE;
-	glScalef((GLfloat)Scale, (GLfloat)Scale, (GLfloat)Scale);
+	glScalef((GLfloat)SIZE, (GLfloat)SIZE, (GLfloat)SIZE);
 
 	// set the fog parameters:
 
@@ -609,7 +611,7 @@ Display()
 		for (int row = 0; row < SIZE; row++) {
 			for (int col = 0; col < SIZE; col++) {
 				glPushMatrix();
-				glTranslatef(GRIDCELLSIZE * (0.5 - 0.5 * (float)SIZE + col), 0., GRIDCELLSIZE * (0.5 - 0.5 * (float)SIZE + row));
+				glTranslatef(CELLSIZE * (0.5 - 0.5 * (float)SIZE + col), 0., CELLSIZE * (0.5 - 0.5 * (float)SIZE + row));
 				struct Point nowPoint = getAtIndex(row, col);
 				float vx = nowPoint.vx;
 				float vy = nowPoint.vy;
@@ -631,22 +633,22 @@ Display()
 			float x = fluidVertices[i].xpos;
 			float y = fluidVertices[i].ypos;
 
-			// Compute midpoint
+		//	// Compute midpoint
 			Vec2 v1 = sampleLinearVelocity(x, y);
 			float midX = x + 0.5f * currentTime * v1.x;
 			float midY = y + 0.5f * currentTime * v1.y;
-			// Sample velocity at midpoint
+		//	// Sample velocity at midpoint
 			Vec2 v2 = sampleLinearVelocity(midX, midY);
-			// Update final vertex position
+		//	// Update final vertex position
 			fluidVertices[i].xpos = x + currentTime * v2.x;
 			fluidVertices[i].ypos = y + currentTime * v2.y;
 		}
 		glDisable(GL_LIGHTING);
-		float sphereRadius = 0.25f * CELLSIZE;
+		float sphereRadius = 0.1f * CELLSIZE;
 		for (int i = 0; i < (SIZE - 2) * (SIZE - 2); i++) {
 			//fprintf(stderr, "Pos: (%.3f,%.3f)\n", fluidVertices[i].xpos, fluidVertices[i].ypos);
 			glPushMatrix();
-			glTranslatef(fluidVertices[i].xpos, 0.f, fluidVertices[i].ypos);
+			glTranslatef(fluidVertices[i].ypos, 0.f, fluidVertices[i].xpos);
 			glColor3f(0., 0., 1.);
 			glutSolidSphere(sphereRadius, 8, 8);
 			glPopMatrix();
@@ -660,9 +662,8 @@ Display()
 	glCallList(GridList);
 	glPopMatrix();
 
-	
-
 	glPushMatrix();
+	glTranslatef(0., -0.03, 0.);
 	glCallList(BackgroundList);
 	glPopMatrix();
 
@@ -939,7 +940,7 @@ InitLists()
 	// glEnd();
 	// glEndList();
 
-	float xPoint = GRIDCELLSIZE * ((float)SIZE / 2);
+	float xPoint = CELLSIZE * ((float)SIZE / 2);
 
 	// Create the grid
 	GridList = glGenLists(1);
@@ -949,17 +950,17 @@ InitLists()
 	for (int i = 0; i <= SIZE; i++) {
 		glColor3f(1., 0., 0.);
 		// Draw the horizontal line
-		glVertex3f(-xPoint, 0., xPoint - (GRIDCELLSIZE * (float)i));
-		glVertex3f(xPoint, 0., xPoint - (GRIDCELLSIZE * (float)i));
+		glVertex3f(-xPoint, 0., xPoint - (CELLSIZE * (float)i));
+		glVertex3f(xPoint, 0., xPoint - (CELLSIZE * (float)i));
 		// Draw the vertical line
-		glVertex3f(xPoint - (GRIDCELLSIZE * (float)i), 0., -xPoint);
-		glVertex3f(xPoint - (GRIDCELLSIZE * (float)i), 0., xPoint);
+		glVertex3f(xPoint - (CELLSIZE * (float)i), 0., -xPoint);
+		glVertex3f(xPoint - (CELLSIZE * (float)i), 0., xPoint);
 	}
 	glEnd();
 	glEndList();
 
 	// Draw the arrows
-	float cf2 = GRIDCELLSIZE / 2.;
+	float cf2 = CELLSIZE / 2.;
 	ArrowList = glGenLists(1);
 	glNewList(ArrowList, GL_COMPILE);
 	glBegin(GL_LINE_STRIP);
@@ -982,10 +983,10 @@ InitLists()
 	glNewList(BackgroundList, GL_COMPILE);
 	glBegin(GL_QUADS);
 	glColor3f(0.8, 0.8, 0.8);
-	glVertex3f(-xPoint - GRIDCELLSIZE, -0.5, -xPoint - (2. * GRIDCELLSIZE));
-	glVertex3f(xPoint + GRIDCELLSIZE, -0.5, -xPoint - (2. * GRIDCELLSIZE));
-	glVertex3f(xPoint + GRIDCELLSIZE, -0.5, xPoint + 2. * GRIDCELLSIZE);
-	glVertex3f(-xPoint - GRIDCELLSIZE, -0.5, xPoint + 2. * GRIDCELLSIZE);
+	glVertex3f(-xPoint - CELLSIZE, 0., -xPoint - (2. * CELLSIZE));
+	glVertex3f(xPoint + CELLSIZE, 0., -xPoint - (2. * CELLSIZE));
+	glVertex3f(xPoint + CELLSIZE, 0., xPoint + 2. * CELLSIZE);
+	glVertex3f(-xPoint - CELLSIZE, 0., xPoint + 2. * CELLSIZE);
 	glEnd();
 	glEndList();
 
@@ -1210,7 +1211,7 @@ Reset()
 	Scale = 1.0;
 	ShadowsOn = 0;
 	NowColor = YELLOW;
-	NowProjection = ORTHO;
+	NowProjection = PERSP;
 	Xrot = Yrot = 0.;
 }
 
@@ -1922,12 +1923,15 @@ void InitGrid() {
 	fluidVertices = (struct FluidVertex*)malloc(((SIZE - 2) * (SIZE - 2)) * sizeof(FluidVertex));
 	if (fluidVertices) {
 		fprintf(stderr, "Fluid vertices initialized!\n");
-		float halfGrid = (SIZE - 2) * CELLSIZE * 0.5f;
-		for (int row = 1; row < SIZE - 1; row++) {
-			for (int col = 1; col < SIZE - 1; col++) {
-				int idx = (row - 1) * (SIZE - 2) + (col - 1);
-				fluidVertices[idx].xpos = (col - 1) * CELLSIZE - halfGrid + 0.5f * CELLSIZE;
-				fluidVertices[idx].ypos = (row - 1) * CELLSIZE - halfGrid + 0.5f * CELLSIZE;
+		float tlc = -0.5 * SIZE * CELLSIZE;
+		float halfCell = 0.5 * CELLSIZE;
+		// Place points in respect to grid, translate from origin with respect to top left corner
+		for (int row = 0; row < SIZE - 2; row++) {
+			for (int col = 0; col < SIZE - 2; col++) {
+				int idx = row * (SIZE - 2) + col;
+				fluidVertices[idx].xpos = tlc + (1 + col) * CELLSIZE + halfCell;
+				fluidVertices[idx].ypos = tlc + (1 + row) * CELLSIZE + halfCell;
+				fprintf(stderr, "(%d,%d):(%.3f, %.3f)\n", row, col, fluidVertices[idx].xpos, fluidVertices[idx].ypos);
 			}
 		}
 	}
