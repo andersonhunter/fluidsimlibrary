@@ -262,6 +262,9 @@ int		frameCount = 0;
 int		warmupFrames = 3;
 bool	gridMode = false;
 float	currentTime = 0.;
+float	fps = 0.;
+int		currentFrameCount = 0;
+int		previousTime = 0;
 
 // function prototypes:
 
@@ -425,7 +428,7 @@ main(int argc, char* argv[])
 	InitGrid();
 	// Initialize boundaries
 	InitBoundaries();
-
+	previousTime = glutGet(GLUT_ELAPSED_TIME);
 	// draw the scene once and wait for some interaction:
 	// (this will never return)
 
@@ -543,7 +546,7 @@ Display()
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	if (NowProjection == ORTHO)
-		glOrtho(-25.f, 25.f, -25.f, 25.f, 0.1f, 1000.f);
+		glOrtho(-25.f, 25.f, -25.f, 25.f, 0.1f, 100.f);
 	else
 		gluPerspective(70.f, 1.f, 1.f, 50.f);
 
@@ -565,7 +568,7 @@ Display()
 
 	if (Scale < MINSCALE)
 		Scale = MINSCALE;
-	glScalef((GLfloat)SIZE, (GLfloat)SIZE, (GLfloat)SIZE);
+	glScalef((GLfloat)Scale, (GLfloat)Scale, (GLfloat)Scale);
 
 	// set the fog parameters:
 
@@ -599,12 +602,21 @@ Display()
 	SetPointLight(GL_LIGHT0, 0., 1., 0., 1., 1., 1.);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
-	glEnable(GL_COLOR_MATERIAL);
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+	//glEnable(GL_COLOR_MATERIAL);
+	//glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 
 	int msec = glutGet(GLUT_ELAPSED_TIME) % MSEC;
 
 	float nowTime = (float)msec / 1000.f;
+	
+	int currentSimTime = glutGet(GLUT_ELAPSED_TIME);
+	currentFrameCount++;
+	if (currentSimTime - previousTime > 1000) {
+		fps = currentFrameCount * 1000.f / (currentSimTime - previousTime);
+		previousTime = currentSimTime;
+		currentFrameCount = 0;
+		fprintf(stderr, "fps: %.2f\n", fps);
+	}
 
 	if (gridMode) {
 		// Rotate, then transform
@@ -613,6 +625,7 @@ Display()
 				float tlc = -0.5 * SIZE * CELLSIZE;
 				float halfCell = 0.5 * CELLSIZE;
 				glPushMatrix();
+				SetMaterial(0., 0., 1., 20.);
 				glTranslatef(tlc + halfCell + (col * CELLSIZE), 0., tlc + halfCell + (row * CELLSIZE));
 				struct Point nowPoint = getAtIndex(row, col);
 				float vx = nowPoint.vx;
@@ -645,26 +658,29 @@ Display()
 			fluidVertices[i].xpos = x + currentTime * v2.x;
 			fluidVertices[i].ypos = y + currentTime * v2.y;
 		}
-		glDisable(GL_LIGHTING);
-		float sphereRadius = 0.1f * CELLSIZE;
+		float sphereRadius = 0.3 * CELLSIZE;
 		for (int i = 0; i < (SIZE - 2) * (SIZE - 2); i++) {
-			//fprintf(stderr, "Pos: (%.3f,%.3f)\n", fluidVertices[i].xpos, fluidVertices[i].ypos);
+			float tlc = -0.5 * SIZE * CELLSIZE;
+			float halfCell = 0.5 * CELLSIZE;
+			float worldX = tlc + halfCell + fluidVertices[i].xpos;
+			float worldY = tlc + halfCell + fluidVertices[i].ypos;
+			fprintf(stderr, "Pos: (%.3f,%.3f)\n", fluidVertices[i].xpos, fluidVertices[i].ypos);
 			glPushMatrix();
-			glTranslatef(fluidVertices[i].ypos, 0.f, fluidVertices[i].xpos);
-			glColor3f(0., 0., 1.);
+			glTranslatef(worldX, 0.f, worldY);
+			SetMaterial(0., 0., 1., 20.);
 			glutSolidSphere(sphereRadius, 8, 8);
 			glPopMatrix();
 		}
-		glEnable(GL_LIGHTING);
 	}
-
 	
 
 	glPushMatrix();
+	SetMaterial(1., 0., 0., 20.);
 	glCallList(GridList);
 	glPopMatrix();
 
 	glPushMatrix();
+	SetMaterial(0.8, 0.8, 0.8, 20.);
 	glTranslatef(0., -0.03, 0.);
 	glCallList(BackgroundList);
 	glPopMatrix();
@@ -971,14 +987,14 @@ InitLists()
 	glBegin(GL_LINES);
 	glColor3f(0., 0., 1.);
 	// The shaft
-	glVertex3f(-shaft * 0.5, 0., 0.);
-	glVertex3f(shaft * 0.5, 0., 0.);
+	glVertex3f(-shaft, 0., 0.);
+	glVertex3f(shaft, 0., 0.);
 	// Head
-	glVertex3f(shaft * 0.5f, 0.f, 0.f);
-	glVertex3f(shaft * 0.5f - head, 0.f, hw);
+	glVertex3f(shaft, 0.f, 0.f);
+	glVertex3f(shaft - head, 0.f, hw);
 
-	glVertex3f(shaft * 0.5f, 0.f, 0.f);
-	glVertex3f(shaft * 0.5f - head, 0.f, -hw);
+	glVertex3f(shaft, 0.f, 0.f);
+	glVertex3f(shaft - head, 0.f, -hw);
 
 	glEnd();
 	glEndList();
@@ -1208,12 +1224,12 @@ void
 Reset()
 {
 	ActiveButton = 0;
-	AxesOn = 1;
+	AxesOn = 0;
 	DebugOn = 0;
 	DepthBufferOn = 1;
 	DepthFightingOn = 0;
 	DepthCueOn = 0;
-	Scale = 1.0;
+	Scale = 16.0;
 	ShadowsOn = 0;
 	NowColor = YELLOW;
 	NowProjection = PERSP;
@@ -1936,7 +1952,6 @@ void InitGrid() {
 				int idx = row * (SIZE - 2) + col;
 				fluidVertices[idx].xpos = tlc + (1 + col) * CELLSIZE + halfCell;
 				fluidVertices[idx].ypos = tlc + (1 + row) * CELLSIZE + halfCell;
-				fprintf(stderr, "(%d,%d):(%.3f, %.3f)\n", row, col, fluidVertices[idx].xpos, fluidVertices[idx].ypos);
 			}
 		}
 	}
