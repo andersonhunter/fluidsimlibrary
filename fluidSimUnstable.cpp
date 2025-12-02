@@ -260,11 +260,12 @@ float	alpha = 0.2;
 float	maxVel = 0.0;
 int		frameCount = 0;
 int		warmupFrames = 3;
-bool	gridMode = false;
+bool	gridMode = true;
 float	currentTime = 0.;
 float	fps = 0.;
 int		currentFrameCount = 0;
 int		previousTime = 0;
+int		particlesPerCell = 4;
 
 // function prototypes:
 
@@ -491,7 +492,7 @@ Animate()
 
 	// Turn on later
 	// Timestep smoothing?
-	// dt = 0.9f * previous_dt + 0.1f * dt;
+	//dt = 0.9f * previous_dt + 0.1f * dt;
 	
 	maxMagnitude = safeVelocity;
 
@@ -615,58 +616,99 @@ Display()
 		fps = currentFrameCount * 1000.f / (currentSimTime - previousTime);
 		previousTime = currentSimTime;
 		currentFrameCount = 0;
-		fprintf(stderr, "fps: %.2f\n", fps);
+		//fprintf(stderr, "fps: %.2f\n", fps);
 	}
 
 	if (gridMode) {
-		// Rotate, then transform
+		// Top left corner
+		float tlc = -0.5f * SIZE * CELLSIZE;
+		float halfCell = 0.5f * CELLSIZE;
+		float sphereRadius = 0.1f * CELLSIZE;
+
+		// Draw the arrows
 		for (int row = 0; row < SIZE; row++) {
 			for (int col = 0; col < SIZE; col++) {
-				float tlc = -0.5 * SIZE * CELLSIZE;
-				float halfCell = 0.5 * CELLSIZE;
+				float xPos = tlc + halfCell + col * CELLSIZE;
+				float yPos = tlc + halfCell + row * CELLSIZE;
+
+				Point p = grid[row * SIZE + col];
+				float vx = p.vx;
+				float vy = p.vy;
+
+				float theta = atan2(vy, vx) * 180.f / M_PI;
+				float mag = sqrtf(vx * vx + vy * vy);
+				float scale = fmax(fmin(mag / maxMagnitude, 1.f), 0.05);
+
 				glPushMatrix();
-				SetMaterial(0., 0., 1., 20.);
-				glTranslatef(tlc + halfCell + (col * CELLSIZE), 0., tlc + halfCell + (row * CELLSIZE));
-				struct Point nowPoint = getAtIndex(row, col);
-				float vx = nowPoint.vx;
-				float vy = nowPoint.vy;
-				float theta = atan2(vy, vx);
-				glRotatef(theta * 180. / M_PI, 0., 1., 0.);
-				// Scale the arrow to [0, 1] based on magnitude
-				float mag = sqrtf((vx * vx) + (vy * vy)) / maxMagnitude;
-				glScalef(mag, mag, mag);
+				glTranslatef(xPos, 0.f, yPos);
+				glRotatef(theta, 0.f, 1.f, 0.f);
+				glScalef(scale, scale, scale);
+				SetMaterial(1., 0., 0., 20.);
 				glCallList(ArrowList);
 				glPopMatrix();
 			}
 		}
+
+		// Calculate water vertices
+		// Use RK2 advection
+		int numParticles = particlesPerCell * (SIZE - 2) * (SIZE - 2);
+		for (int i = 0; i < numParticles; i++) {
+			float x = fluidVertices[i].xpos;
+			float y = fluidVertices[i].ypos;
+
+			// Compute midpoint
+			Vec2 v1 = sampleLinearVelocity(x, y);
+			float midX = x + 0.5f * currentTime * v1.x;
+			float midY = y + 0.5f * currentTime * v1.y;
+			// Sample velocity at midpoint
+			Vec2 v2 = sampleLinearVelocity(midX, midY);
+			// Update final vertex position
+			x += currentTime * v2.x;
+			y += currentTime * v2.y;
+			// Clamp to interior of grid
+			fluidVertices[i].xpos = fmaxf(1.f, fminf(x, SIZE - 2.f));
+			fluidVertices[i].ypos = fmaxf(1.f, fminf(y, SIZE - 2.f));
+
+		}
+		for (int i = 0; i < numParticles; i++) {
+			float worldX = tlc + fluidVertices[i].xpos * CELLSIZE + halfCell;
+			float worldY = tlc + fluidVertices[i].ypos * CELLSIZE + halfCell;
+			glPushMatrix();
+			glTranslatef(worldX, 0.f, worldY);
+			SetMaterial(0., 0., 1., 20.);
+			glutSolidSphere(sphereRadius, 8, 8);
+			glPopMatrix();
+		}
+
 	}
 
 	else {
 		// Calculate water vertices
 		// Use RK2 advection
+		float minPos = 1.f * CELLSIZE;
+		float maxPos = (SIZE - 2) * CELLSIZE;
 		for (int i = 0; i < (SIZE - 2) * (SIZE - 2); i++) {
 			float x = fluidVertices[i].xpos;
 			float y = fluidVertices[i].ypos;
 
-		//	// Compute midpoint
+			// Compute midpoint
 			Vec2 v1 = sampleLinearVelocity(x, y);
 			float midX = x + 0.5f * currentTime * v1.x;
 			float midY = y + 0.5f * currentTime * v1.y;
-		//	// Sample velocity at midpoint
+			// Sample velocity at midpoint
 			Vec2 v2 = sampleLinearVelocity(midX, midY);
-		//	// Update final vertex position
-			fluidVertices[i].xpos = x + currentTime * v2.x;
-			fluidVertices[i].ypos = y + currentTime * v2.y;
+			// Update final vertex position
+			float newX = x + currentTime * v2.x;
+			float newY = y + currentTime * v2.y;
+			// Clamp to interior of grid
+			fluidVertices[i].xpos = fmaxf(minPos, fminf(newX, maxPos));
+			fluidVertices[i].ypos = fmaxf(minPos, fminf(newY, maxPos));
+
 		}
-		float sphereRadius = 0.3 * CELLSIZE;
+		float sphereRadius = 0.1 * CELLSIZE;
 		for (int i = 0; i < (SIZE - 2) * (SIZE - 2); i++) {
-			float tlc = -0.5 * SIZE * CELLSIZE;
-			float halfCell = 0.5 * CELLSIZE;
-			float worldX = tlc + halfCell + fluidVertices[i].xpos;
-			float worldY = tlc + halfCell + fluidVertices[i].ypos;
-			fprintf(stderr, "Pos: (%.3f,%.3f)\n", fluidVertices[i].xpos, fluidVertices[i].ypos);
 			glPushMatrix();
-			glTranslatef(worldX, 0.f, worldY);
+			glTranslatef(fluidVertices[i].xpos, 0.f, fluidVertices[i].ypos);
 			SetMaterial(0., 0., 1., 20.);
 			glutSolidSphere(sphereRadius, 8, 8);
 			glPopMatrix();
@@ -1525,46 +1567,31 @@ float linearInterpolate(float p1, float p2, float dt) {
 
 Vec2 sampleLinearVelocity(float x, float y) {
 	// Sample the velocity at a given internal, non-int index
-	float gx = x / CELLSIZE;
-	float gy = y / CELLSIZE;
 
-	int ix = floor(gx);
-	int iy = floor(gy);
+	int ix = floor(x);
+	int iy = floor(y);
 
-	float tx = gx - ix;
-	float ty = gy - iy;
+	float tx = x - ix;
+	float ty = y - iy;
 
 	// Clamp to grid bounds
-	ix = (ix < 1) ? 1 : ix;
-	ix = (ix > SIZE - 3) ? (SIZE - 3) : ix;
+	ix = (ix < 0) ? 0 : (ix > SIZE - 2 ? SIZE - 2 : ix);
+	iy = (iy < 0) ? 0 : (iy > SIZE - 2 ? SIZE - 2 : iy);
 
-	iy = (iy < 1) ? 1 : iy;
-	iy = (iy > SIZE - 3) ? (SIZE - 3) : iy;
-
-	Point p0 = grid[ix * SIZE + iy];
-	Point p1 = grid[ix * SIZE + iy + 1];
-	Point p2 = grid[(ix + 1) * SIZE + iy];
-	Point p3 = grid[(ix + 1) * SIZE + iy + 1];
-
-	float u0 = p0.vx;
-	float u1 = p1.vx;
-	float u2 = p2.vx;
-	float u3 = p3.vx;
-
-	float v0 = p0.vy;
-	float v1 = p1.vy;
-	float v2 = p2.vy;
-	float v3 = p3.vy;
+	Point p00 = grid[iy * SIZE + ix];
+	Point p10 = grid[iy * SIZE + ix + 1];
+	Point p01 = grid[(iy + 1) * SIZE + ix];
+	Point p11 = grid[(iy + 1) * SIZE + ix + 1];
 
 	// Do Bilinear interpolation
-	float uTop = linearInterpolate(u0, u1, ty);
-	float uBot = linearInterpolate(u2, u3, ty);
-	float vTop = linearInterpolate(v0, v1, ty);
-	float vBot = linearInterpolate(v2, v3, ty);
+	float uTop = linearInterpolate(p00.vx, p10.vx, tx);
+	float uBot = linearInterpolate(p01.vx, p11.vx, tx);
+	float vTop = linearInterpolate(p00.vy, p10.vy, tx);
+	float vBot = linearInterpolate(p01.vy, p11.vy, tx);
 	
 	Vec2 out;
-	out.x = linearInterpolate(uTop, uBot, tx);
-	out.y = linearInterpolate(vTop, vBot, tx);
+	out.x = linearInterpolate(uTop, uBot, ty);
+	out.y = linearInterpolate(vTop, vBot, ty);
 	return out;
 }
 
@@ -1591,21 +1618,21 @@ void calculateAdvection(float timestep) {
 	bool useLinear = (frameCount < warmupFrames);
 
 	// Only advect interior cells
-	for (int x = 1; x < SIZE - 1; x++) {
+	for (int row = 1; row < SIZE - 1; row++) {
 		//fprintf(stdout, "%d,,", x);
-		for (int y = 1; y < SIZE - 1; y++) {
+		for (int col = 1; col < SIZE - 1; col++) {
+			Point p = getAtIndex(col, row);
 			float forwardX, forwardY;
-			float backwardX, backwardY;
 			// Calculate the forward estimate
 			// Get next (x, y) coords
-			float xNext = (float)x + getAtIndex(x, y).vx * timestep;
-			float yNext = (float)y + getAtIndex(x, y).vy * timestep;
+			float rowNext = (float)row + p.vy * timestep / CELLSIZE;
+			float colNext = (float)col + p.vx * timestep / CELLSIZE;
 			// Round to nearest whole index
-			int i = floor(xNext);
-			int j = floor(yNext);
+			int i = floor(rowNext);
+			int j = floor(colNext);
 			// Calculate fractional offsets
-			float dx = xNext - i;
-			float dy = yNext - j;
+			float dx = colNext - j;
+			float dy = rowNext - i;
 			// Interpolate x and y velocities at the new point
 			// vx, vy = CI(CI(p0..p3, dx), dy)
 			// If point is outside the grid, use ghost cell
@@ -1615,50 +1642,35 @@ void calculateAdvection(float timestep) {
 			// Estimate row-by-row x-velocity
 			float tempX[4];
 			float tempY[4];
-			float vx = getAtIndex(x, y).vx;
-			float vy = getAtIndex(x, y).vy;
 			for (int n = -1; n <= 2; n++) {
 				// Pull 4x4 neighbors, use ghost cells if OOBs
-				int u = i + n;
-				int v0 = j - 1;
-				int v1 = j;
-				int v2 = j + 1;
-				int v3 = j + 2;
+				int rr = i + n;
 
-				struct Point p0 = getAtIndex(u, v0);
-				struct Point p1 = getAtIndex(u, v1);
-				struct Point p2 = getAtIndex(u, v2);
-				struct Point p3 = getAtIndex(u, v3);
+				struct Point p0 = getAtIndex(j - 1, rr);
+				struct Point p1 = getAtIndex(j, rr);
+				struct Point p2 = getAtIndex(j + 1, rr);
+				struct Point p3 = getAtIndex(j + 2, rr);
 
 				if (useLinear) {
 					tempX[n + 1] = linearInterpolate(p1.vx, p2.vx, dx);
 					tempY[n + 1] = linearInterpolate(p1.vy, p2.vy, dx);
-					// Calculate forward estimates
-					forwardX = linearInterpolate(tempX[1], tempX[2], dy);
-					forwardY = linearInterpolate(tempY[1], tempY[2], dy);
 				}
 
 				else {
-					tempX[n + 1] = cubicInterpolate(
-						p0.vx,
-						p1.vx,
-						p2.vx,
-						p3.vx,
-						dx
-					);
-					tempY[n + 1] = cubicInterpolate(
-						p0.vy,
-						p1.vy,
-						p2.vy,
-						p3.vy,
-						dx
-					);
+					tempX[n + 1] = cubicInterpolate(p0.vx, p1.vx, p2.vx, p3.vx, dx);
+					tempY[n + 1] = cubicInterpolate(p0.vy, p1.vy, p2.vy, p3.vy, dx);
 				}
-				// Calculate forward estimates
-			}
-			forwardX = cubicInterpolate(tempX[0], tempX[1], tempX[2], tempX[3], dy);
-			forwardY = cubicInterpolate(tempY[0], tempY[1], tempY[2], tempY[3], dy);
 
+			}
+
+			if (useLinear) {
+				forwardX = linearInterpolate(tempX[1], tempX[2], dy);
+				forwardY = linearInterpolate(tempY[1], tempY[2], dy);
+			}
+			else {
+				forwardX = cubicInterpolate(tempX[0], tempX[1], tempX[2], tempX[3], dy);
+				forwardY = cubicInterpolate(tempY[0], tempY[1], tempY[2], tempY[3], dy);
+			}
 
 			// Back trace the point and interpolate x and y velocities
 			// vx, vy = CI(CI(p0..p3, dx), dy)
@@ -1666,77 +1678,67 @@ void calculateAdvection(float timestep) {
 			// Add more quantities (temperature, density, etc) here
 			// Maybe turn backward into a backStruct at some point?
 
-			float xPrev = (float)x - forwardX * timestep;
-			float yPrev = (float)y - forwardY * timestep;
+			float rowPrev = row - p.vy * timestep / CELLSIZE;
+			float colPrev = col - p.vx * timestep / CELLSIZE;
 			// Round to nearest whole index
-			i = floor(xPrev);
-			j = floor(yPrev);
+			i = floor(rowPrev);
+			j = floor(colPrev);
 			// Calculate fractional offsets
-			dx = xPrev - i;
-			dy = yPrev - j;
+			dx = colPrev - j;
+			dy = rowPrev - i;
 
 			float tempXPrev[4];
 			float tempYPrev[4];
+			float backwardX = 0.f, backwardY = 0.f;
 
 			for (int n = -1; n <= 2; n++) {
 				// Pull 4x4 neighbors, use ghost cells if OOBs
-				int u = i + n;
-				int v0 = j - 1;
-				int v1 = j;
-				int v2 = j + 1;
-				int v3 = j + 2;
+				int rr = i + n;
 
-				struct Point p0 = getAtIndex(u, v0);
-				struct Point p1 = getAtIndex(u, v1);
-				struct Point p2 = getAtIndex(u, v2);
-				struct Point p3 = getAtIndex(u, v3);
+				struct Point p0 = getAtIndex(j - 1, rr);
+				struct Point p1 = getAtIndex(j, rr);
+				struct Point p2 = getAtIndex(j + 1, rr);
+				struct Point p3 = getAtIndex(j + 2, rr);
 
+				// Calculate backward estimates
 				if (useLinear) {
 					tempXPrev[n + 1] = linearInterpolate(p1.vx, p2.vx, dx);
 					tempYPrev[n + 1] = linearInterpolate(p1.vy, p2.vy, dx);
-					backwardX = linearInterpolate(tempXPrev[1], tempXPrev[2], dy);
-					backwardY = linearInterpolate(tempYPrev[1], tempYPrev[2], dy);
+					
 				}
-
 				else {
-					tempXPrev[n + 1] = cubicInterpolate(
-						p0.vx,
-						p1.vx,
-						p2.vx,
-						p3.vx,
-						dx
-					);
-					tempYPrev[n + 1] = cubicInterpolate(
-						p0.vy,
-						p1.vy,
-						p2.vy,
-						p3.vy,
-						dx
-					);
+					tempXPrev[n + 1] = cubicInterpolate(p0.vx, p1.vx, p2.vx, p3.vx, dx);
+					tempYPrev[n + 1] = cubicInterpolate(p0.vy, p1.vy, p2.vy, p3.vy, dx);
 				}
 			}
-			// Calculate backward estimates
-			backwardX = cubicInterpolate(tempXPrev[0], tempXPrev[1], tempXPrev[2], tempXPrev[3], dy);
-			backwardY = cubicInterpolate(tempYPrev[0], tempYPrev[1], tempYPrev[2], tempYPrev[3], dy);
+			
+			if (useLinear) {
+				backwardX = linearInterpolate(tempXPrev[1], tempXPrev[2], dy);
+				backwardY = linearInterpolate(tempYPrev[1], tempYPrev[2], dy);
+			}
 
+			else {
+				backwardX = cubicInterpolate(tempXPrev[0], tempXPrev[1], tempXPrev[2], tempXPrev[3], dy);
+				backwardY = cubicInterpolate(tempYPrev[0], tempYPrev[1], tempYPrev[2], tempYPrev[3], dy);
+			}
 
 			// Calculate corrected value
 			//  Corrected Value = Forward Estimate + 0.5 * (Original Value - Backward Estimate)
 			// Clamp forward and backward estimates
-			float correctedX = forwardX + 0.5 * (getAtIndex(x, y).vx - backwardX);
-			float correctedY = forwardY + 0.5 * (getAtIndex(x, y).vy - backwardY);
+			float correctedX = forwardX + 0.5 * (p.vx - backwardX);
+			float correctedY = forwardY + 0.5 * (p.vy - backwardY);
 
 			// Apply minmod to prevent overshooting
 			if (MINMOD) {
-				float deltaX = correctedX - getAtIndex(x, y).vx;
-				float slopeX = forwardX - getAtIndex(x, y).vx;
+				float deltaX = correctedX - p.vx;
+				float slopeX = forwardX - p.vx;
 				float limitedX = minmod(deltaX, slopeX);
-				correctedX = getAtIndex(x, y).vx + alpha * limitedX;
+				correctedX = p.vx + alpha * limitedX;
 
-				float deltaY = correctedY - getAtIndex(x, y).vy;
-				float slopeY = forwardY - getAtIndex(x, y).vy;
+				float deltaY = correctedY - p.vy;
+				float slopeY = forwardY - p.vy;
 				float limitedY = minmod(deltaY, slopeY);
-				correctedY = getAtIndex(x, y).vy + alpha * limitedY;
+				correctedY = p.vy + alpha * limitedY;
 
 				float vmax = 1.f;
 				correctedX = fmax(fmin(correctedX, vmax), -vmax);
@@ -1746,10 +1748,8 @@ void calculateAdvection(float timestep) {
 
 			// Copy new value into temporary struct
 			// Don't write into the boundary
-			if (x > 0 && x < SIZE - 1 && y > 0 && y < SIZE - 1) {
-				tempGrid[SIZE * x + y].vx = correctedX;
-				tempGrid[SIZE * x + y].vy = correctedY;
-			}
+			tempGrid[row * SIZE + col].vx = correctedX;
+			tempGrid[row * SIZE + col].vy = correctedY;
 
 			if (DEBUG)
 			{    // Debug stuff
@@ -1773,47 +1773,45 @@ void calculateAdvection(float timestep) {
 	float* tempOldPressures = (float*)calloc(SIZE * SIZE, sizeof(float));
 
 	// Calculate sourceTerm ((x-comp + y-comp) * material derivative * h^2) for each point
-	for (int i = 0; i < SIZE; i++) {
-		for (int j = 0; j < SIZE; j++) {
-			float p0 = getAtIndexGridGiven(i + 1, j, tempGrid).vx;
-			float p1 = getAtIndexGridGiven(i - 1, j, tempGrid).vx;
-			float p2 = getAtIndexGridGiven(i, j + 1, tempGrid).vy;
-			float p3 = getAtIndexGridGiven(i, j - 1, tempGrid).vy;
-			tempGrid[SIZE * i + j].sourceTerm = (p0 - p1 + p2 - p3) / (2. * (float)CELLSIZE);
+	for (int row = 0; row < SIZE; row++) {
+		for (int col = 0; col < SIZE; col++) {
+			float p0 = getAtIndexGridGiven(col + 1, row, tempGrid).vx;
+			float p1 = getAtIndexGridGiven(col - 1, row, tempGrid).vx;
+			float p2 = getAtIndexGridGiven(col, row + 1, tempGrid).vy;
+			float p3 = getAtIndexGridGiven(col, row - 1, tempGrid).vy;
+			tempGrid[row * SIZE + col].sourceTerm = (p0 - p1 + p2 - p3) / (2. * (float)CELLSIZE);
 		}
 	}
 	// Jacobi
 	float maxError = INFINITY;
 	int iters = 0;
-	while (maxError > JACOBIS && iters <= MAXITERS) {
+	while (maxError > JACOBIS && iters < MAXITERS) {
 		iters++;
 		// Move over old pressures
 		maxError = 0.;
 		memcpy(tempOldPressures, tempPressures, SIZE * SIZE * sizeof(float));
-		for (int i = 1; i < SIZE - 1; i++) {
-			for (int j = 1; j < SIZE - 1; j++) {
-				tempPressures[SIZE * i + j] = solveDivergence(
-					getSafePressure(tempOldPressures, i + 1, j),
-					getSafePressure(tempOldPressures, i - 1, j),
-					getSafePressure(tempOldPressures, i, j + 1),
-					getSafePressure(tempOldPressures, i, j - 1),
-					tempGrid[SIZE * i + j].sourceTerm
+		for (int row = 1; row < SIZE - 1; row++) {
+			for (int col = 1; col < SIZE - 1; col++) {
+				tempPressures[row * SIZE + col] = solveDivergence(
+					getSafePressure(tempOldPressures, col + 1, row),
+					getSafePressure(tempOldPressures, col - 1, row),
+					getSafePressure(tempOldPressures, col, row + 1),
+					getSafePressure(tempOldPressures, col, row - 1),
+					tempGrid[row * SIZE + col].sourceTerm
 				);
-				float currentError = fabs(tempOldPressures[i * SIZE + j] - tempPressures[i * SIZE + j]);
-				if (currentError > maxError) {
-					maxError = currentError;
-				}
-				//fprintf(stderr, "maxError = %f\n", maxError);
+				maxError = fmaxf(maxError, fabs(
+					tempPressures[row * SIZE + col] - tempOldPressures[row * SIZE + col]
+				));
 			}
 		}
 		// Update ghost cells
-		for (int i = 0; i < SIZE; i++) {
-			// top/bottom
-			tempPressures[i] = tempPressures[SIZE + i];           // top row
-			tempPressures[(SIZE - 1) * SIZE + i] = tempPressures[(SIZE - 2) * SIZE + i]; // bottom row
-			// left/right
-			tempPressures[i * SIZE] = tempPressures[i * SIZE + 1];           // left col
-			tempPressures[i * SIZE + (SIZE - 1)] = tempPressures[i * SIZE + (SIZE - 2)]; // right col
+		for (int r = 0; r < SIZE; r++) {
+			tempPressures[r * SIZE] = tempPressures[r * SIZE + 1];
+			tempPressures[r * SIZE + SIZE - 1] = tempPressures[r * SIZE + SIZE - 2];
+		}
+		for (int c = 0; c < SIZE; c++) {
+			tempPressures[c] = tempPressures[SIZE + c];
+			tempPressures[(SIZE - 1) * SIZE + c] = tempPressures[(SIZE - 2) * SIZE + c];
 		}
 	}
 
@@ -1821,14 +1819,17 @@ void calculateAdvection(float timestep) {
 	// vx = (temp vx) - ((dt / rho) * (Pright - Pleft) / 2 * CELLSIZE)
 	// vy = (temp vy) - ((dt / rho) * (Pabove - Pbelow) / 2 * CELLSIZE)
 
-	for (int x = 1; x < SIZE - 1; x++) {
-		for (int y = 1; y < SIZE - 1; y++) {
-			float scale = timestep / grid[SIZE * x + y].density;
+	for (int row = 1; row < SIZE - 1; row++) {
+		for (int col = 1; col < SIZE - 1; col++) {
+			float scale = timestep / grid[row * SIZE + col].density;
 			float h = (float)CELLSIZE;
-			float xcorrection = scale * ((getSafePressure(tempPressures, x + 1, y) - getSafePressure(tempPressures, x - 1, y)) / (2. * h));
-			float ycorrection = scale * ((getSafePressure(tempPressures, x, y + 1) - getSafePressure(tempPressures, x, y - 1)) / (2. * h));
-			tempGrid[x * SIZE + y].vx -= xcorrection;
-			tempGrid[x * SIZE + y].vy -= ycorrection;
+			float pxR = getSafePressure(tempPressures, col + 1, row);
+			float pxL = getSafePressure(tempPressures, col - 1, row);
+			float pyD = getSafePressure(tempPressures, col, row + 1);
+			float pyU = getSafePressure(tempPressures, col, row - 1);
+			
+			tempGrid[row * SIZE + col].vx -= scale * (pxR - pxL) / (2.f * h);
+			tempGrid[row * SIZE + col].vy -= scale * (pyD - pyU) / (2.f * h);
 		}
 	}
 
@@ -1850,7 +1851,7 @@ struct Point getAtIndex(int x, int y) {
 	x = (x > SIZE - 1) ? SIZE - 1 : x;
 	y = (y < 0) ? 0 : y;
 	y = (y > SIZE - 1) ? SIZE - 1 : y;
-	return grid[SIZE * x + y];
+	return grid[SIZE * y + x];
 }
 
 struct Point getAtIndexGridGiven(int x, int y, struct Point* tempGrid) {
@@ -1858,16 +1859,16 @@ struct Point getAtIndexGridGiven(int x, int y, struct Point* tempGrid) {
 	x = (x > SIZE - 1) ? SIZE - 1 : x;
 	y = (y < 0) ? 0 : y;
 	y = (y > SIZE - 1) ? SIZE - 1 : y;
-	return tempGrid[SIZE * x + y];
+	return tempGrid[SIZE * y + x];
 }
 
 void setVxAtIndex(int x, int y, float vx) {
 	// Set x-velocity at a given index
-	grid[SIZE * x + y].vx = vx;
+	grid[SIZE * y + x].vx = vx;
 }
 
 void setVyAtIndex(int x, int y, float vy) {
-	grid[SIZE * x + y].vy = vy;
+	grid[SIZE * y + x].vy = vy;
 }
 
 float getSafePressure(float* pressureGrid, int x, int y) {
@@ -1878,12 +1879,12 @@ float getSafePressure(float* pressureGrid, int x, int y) {
 	x = (x > SIZE - 1) ? SIZE - 1 : x;
 	y = (y < 0) ? 0 : y;
 	y = (y > SIZE - 1) ? SIZE - 1 : y;
-	return pressureGrid[SIZE * x + y];
+	return pressureGrid[SIZE * y + x];
 }
 
 void InitGrid() {
 	grid = (struct Point*)malloc((SIZE * SIZE) * sizeof(Point));
-	float scale = (float)(SIZE) / 2.;
+	float scale = (float)(SIZE) * 0.5;
 	if (grid) {
 		fprintf(stderr, "Grid initialized!\n");
 		const float Vmax = 0.5f;     // maximum velocity magnitude
@@ -1941,17 +1942,22 @@ void InitGrid() {
 		fprintf(stderr, "Error initializing grid\n");
 	}
 	// Set up fluidVertices
-	fluidVertices = (struct FluidVertex*)malloc(((SIZE - 2) * (SIZE - 2)) * sizeof(FluidVertex));
+	fluidVertices = (struct FluidVertex*)malloc(particlesPerCell * (SIZE - 2) * (SIZE - 2) * sizeof(FluidVertex));
 	if (fluidVertices) {
 		fprintf(stderr, "Fluid vertices initialized!\n");
-		float tlc = -0.5 * SIZE * CELLSIZE;
-		float halfCell = 0.5 * CELLSIZE;
+		int idx = 0;
 		// Place points in respect to grid, translate from origin with respect to top left corner
 		for (int row = 0; row < SIZE - 2; row++) {
 			for (int col = 0; col < SIZE - 2; col++) {
-				int idx = row * (SIZE - 2) + col;
-				fluidVertices[idx].xpos = tlc + (1 + col) * CELLSIZE + halfCell;
-				fluidVertices[idx].ypos = tlc + (1 + row) * CELLSIZE + halfCell;
+				float offsets[2] = { 0.25f, 0.75f };
+				for (int oy = 0; oy < 2; oy++) {
+					for (int ox = 0; ox < 2; ox++) {
+						fluidVertices[idx].xpos = col + 1. + offsets[ox];
+						fluidVertices[idx].ypos = row + 1. + offsets[oy];
+						idx++;
+					}
+				}
+				
 			}
 		}
 	}
@@ -1966,10 +1972,12 @@ void InitBoundaries() {
 		// top (row 0)
 		grid[0 * SIZE + j].vx = grid[1 * SIZE + j].vx;   // tangential
 		grid[0 * SIZE + j].vy = -grid[1 * SIZE + j].vy;   // normal flip
+		grid[0 * SIZE + j].pressure = 0.f;
 
 		// bottom (row SIZE-1)
 		grid[(SIZE - 1) * SIZE + j].vx = grid[(SIZE - 2) * SIZE + j].vx;
 		grid[(SIZE - 1) * SIZE + j].vy = -grid[(SIZE - 2) * SIZE + j].vy;
+		grid[(SIZE - 1) * SIZE + j].pressure = 0.f;
 	}
 
 	// left & right
@@ -1977,10 +1985,12 @@ void InitBoundaries() {
 		// left (col 0)
 		grid[i * SIZE + 0].vx = -grid[i * SIZE + 1].vx;   // normal flip
 		grid[i * SIZE + 0].vy = grid[i * SIZE + 1].vy;
+		grid[i * SIZE + 0].pressure = 0.f;
 
 		// right (col SIZE-1)
 		grid[i * SIZE + (SIZE - 1)].vx = -grid[i * SIZE + (SIZE - 2)].vx;
 		grid[i * SIZE + (SIZE - 1)].vy = grid[i * SIZE + (SIZE - 2)].vy;
+		grid[i * SIZE + (SIZE - 1)].pressure = 0.f;
 	}
 }
 
